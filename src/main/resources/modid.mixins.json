@@ -4,7 +4,15 @@
   "package": "ru.DmN.cacuti.mixin",
   "compatibilityLevel": "JAVA_17",
   "mixins": [
-    "MessageCommandMixin"
+    "CommandManagerMixin",
+    "EndermanEntityMixin",
+    "MessageCommandMixin",
+    "PlayerEntityMixin",
+    "ScreenHandlerMixin",
+    "ServerCommandSourceMixin",
+    "ServerLoginNetworkHandlerMixin",
+    "ServerPlayNetworkHandlerMixin",
+    "ShearsItemMixin"
   ],
   "injectors": {
     "defaultRequire": 1

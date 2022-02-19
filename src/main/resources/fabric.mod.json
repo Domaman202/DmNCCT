@@ -19,5 +19,9 @@
   "environment": "*",
   "mixins": [
     "modid.mixins.json"
-  ]
+  ],
+
+  "entrypoints": {
+    "main": ["ru.DmN.cacuti.Main"]
+  }
 }
