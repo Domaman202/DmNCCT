@@ -23,7 +23,7 @@ public abstract class ShearsItemMixin extends AbstractDecorationEntity {
     public void interact(PlayerEntity player, Hand hand, CallbackInfoReturnable<ActionResult> cir) {
         var stack = player.getMainHandStack();
         if (stack.getItem() == Items.SHEARS) {
-            this.setInvisible(true);
+            this.setInvisible(!this.isInvisible());
             cir.setReturnValue(ActionResult.SUCCESS);
             cir.cancel();
         }

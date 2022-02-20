@@ -6,8 +6,13 @@ import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
+import net.minecraft.server.PlayerManager;
+import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
 
 import java.io.*;
 import java.util.*;
@@ -45,13 +50,13 @@ public class Main implements ModInitializer {
 
             dispatcher.register(literal("log_addusr").then(argument("player", StringArgumentType.string()).executes(context -> {
                 logList.add(context.getArgument("player", String.class));
-                save();
+                save(null);
                 return 1;
             })));
 
             dispatcher.register(literal("log_delusr").then(argument("player", StringArgumentType.string()).executes(context -> {
                 logList.remove(context.getArgument("player", String.class));
-                save();
+                save(null);
                 return 1;
             })));
 
@@ -80,13 +85,13 @@ public class Main implements ModInitializer {
 
             dispatcher.register(literal("prefix").then(argument("player", EntityArgumentType.player()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
                 prefixes.put(context.getArgument("player", EntitySelector.class).getPlayer(context.getSource()).getUuid(), context.getArgument("prefix", String.class).replace('#', '§'));
-                save();
+                save(context.getSource().getServer().getPlayerManager());
                 return 1;
             }))));
 
             dispatcher.register(literal("permission_add").then(argument("name", StringArgumentType.word()).then(argument("parent", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
                 addPermission(context.getArgument("name", String.class), context.getArgument("parent", String.class), context.getArgument("prefix", String.class).replace('#', '§'));
-                save();
+                save(null);
                 return 1;
             })))));
 
@@ -96,7 +101,7 @@ public class Main implements ModInitializer {
                         permissions.remove(permission);
                         break;
                     }
-                save();
+                save(context.getSource().getServer().getPlayerManager());
                 return 1;
             })));
 
@@ -106,7 +111,7 @@ public class Main implements ModInitializer {
                         permission.players.add(context.getArgument("user", String.class));
                         break;
                     }
-                save();
+                save(context.getSource().getServer().getPlayerManager());
                 return 1;
             }))));
 
@@ -116,7 +121,7 @@ public class Main implements ModInitializer {
                         permission.players.remove(context.getArgument("user", String.class));
                         break;
                     }
-                save();
+                save(context.getSource().getServer().getPlayerManager());
                 return 1;
             }))));
 
@@ -128,7 +133,7 @@ public class Main implements ModInitializer {
                         permission.commands.add(context.getArgument("command", String.class));//porol22435765463
                         break;
                     }
-                save();
+                save(null);
                 return 1;
             }))));
 
@@ -138,7 +143,7 @@ public class Main implements ModInitializer {
                         permission.commands.remove(context.getArgument("command", String.class));
                         break;
                     }
-                save();
+                save(null);
                 return 1;
             }))));
 
@@ -159,7 +164,7 @@ public class Main implements ModInitializer {
         });
     }
 
-    public void save() {
+    public void save(PlayerManager manager) {
         try {
             var out = new ObjectOutputStream(new FileOutputStream("log_hash.data"));
             out.writeObject(logList);
@@ -180,6 +185,9 @@ public class Main implements ModInitializer {
         } catch (IOException e) {
             e.printStackTrace();
         }
+
+        if (manager != null)
+            manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
     }
 
     public static void addPermission(String name, String parent, String prefix) {

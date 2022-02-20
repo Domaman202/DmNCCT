@@ -13,10 +13,13 @@ import java.lang.reflect.Field;
 @Mixin(ServerLoginNetworkHandler.class)
 public class ServerLoginNetworkHandlerMixin {
     @Inject(method = "addToServer", at = @At("RETURN"))
-    private void addToServer(ServerPlayerEntity player, CallbackInfo ci) throws NoSuchFieldException, IllegalAccessException {
-        System.out.println(player.networkHandler.connection.getAddress());
-        Field f = ClientConnection.class.getDeclaredField("field_11651");
-        f.setAccessible(true);
-        System.out.println(f.get(player.networkHandler.connection));
+    private void addToServer(ServerPlayerEntity player, CallbackInfo ci) {
+        try {
+            System.out.println(player.networkHandler.connection.getAddress());
+            Field f = ClientConnection.class.getDeclaredField("field_11651");
+            f.setAccessible(true);
+            System.out.println(f.get(player.networkHandler.connection));
+        } catch (Exception ignored) {
+        }
     }
 }
