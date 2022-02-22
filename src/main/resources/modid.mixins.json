@@ -6,13 +6,15 @@
   "mixins": [
     "CommandManagerMixin",
     "EndermanEntityMixin",
+    "ItemEntityMixin",
     "MessageCommandMixin",
     "PlayerEntityMixin",
     "ScreenHandlerMixin",
     "ServerCommandSourceMixin",
     "ServerLoginNetworkHandlerMixin",
     "ServerPlayNetworkHandlerMixin",
-    "ShearsItemMixin"
+    "ShearsItemMixin",
+    "SlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1

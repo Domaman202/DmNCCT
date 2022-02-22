@@ -1,20 +1,18 @@
 package ru.DmN.cacuti;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import it.unimi.dsi.fastutil.longs.LongSet;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayNetworkHandler;
-import net.minecraft.server.world.ThreadedAnvilChunkStorage;
 import net.minecraft.text.LiteralText;
-import net.minecraft.text.Text;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 
 import static net.minecraft.server.command.CommandManager.argument;
@@ -24,9 +22,32 @@ public class Main implements ModInitializer {
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
+    public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
     @Override
     public void onInitialize() {
+        PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
+            try {
+                if (!Files.exists(Paths.get("./logs/break/")))
+                    Files.createDirectory(Paths.get("./logs/break/"));
+
+                PrintStream out;
+                if (streamHash.containsKey(player.getUuid()))
+                    out = streamHash.get(player.getUuid());
+                else out = new PrintStream(new FileOutputStream("./logs/break/" + player.getGameProfile().getName() + '_' + Files.list(new File("./logs/break/").toPath()).count()));
+                out.println("world -> " + world.getRegistryKey().getValue());
+                out.println("pos -> " + pos);
+                out.println("ppos -> " + player.getPos());
+                out.println(state);
+                out.println(blockEntity);
+                out.println();
+                out.flush();
+                streamHash.put(player.getUuid(), out);
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        });
+
         CommandRegistrationCallback.EVENT.register((dispatcher, dedicated) -> {
             try {
                 var in = new ObjectInputStream(new FileInputStream("log_hash.data"));
@@ -48,34 +69,24 @@ public class Main implements ModInitializer {
                 e.printStackTrace();
             }
 
-            dispatcher.register(literal("log_addusr").then(argument("player", StringArgumentType.string()).executes(context -> {
-                logList.add(context.getArgument("player", String.class));
-                save(null);
+            dispatcher.register(literal("dmn_test_fake_screen").executes(context -> {
+                var player = context.getSource().getPlayer();
+                player.openHandledScreen(new Fake.Factory());
                 return 1;
-            })));
-
-            dispatcher.register(literal("log_delusr").then(argument("player", StringArgumentType.string()).executes(context -> {
-                logList.remove(context.getArgument("player", String.class));
-                save(null);
-                return 1;
-            })));
-
-            dispatcher.register(literal("tgc").executes(context -> {
-                try {
-                    var cm = context.getSource().getWorld().getChunkManager();
-                    cm.close();
-                    var f = ThreadedAnvilChunkStorage.class.getDeclaredField("loadedChunks");
-                    f.setAccessible(true);
-                    var f0 = ThreadedAnvilChunkStorage.class.getDeclaredField("unloadedChunks");
-                    f0.setAccessible(true);
-                    ((LongSet) f0.get(cm.threadedAnvilChunkStorage)).addAll((LongSet) f.get(cm.threadedAnvilChunkStorage));
-                    System.gc();
-                    return 1;
-                } catch (IOException | NoSuchFieldException | IllegalAccessException e) {
-                    e.printStackTrace();
-                    return 0;
-                }
             }));
+
+            dispatcher.register(literal("log")
+                    .then(literal("add").then(argument("player", EntityArgumentType.player()).executes(context -> {
+                        logList.add(EntityArgumentType.getPlayer(context, "player").getGameProfile().getName());
+                        save(null);
+                        return 1;
+                    })))
+                    .then(literal("del").then(argument("player", EntityArgumentType.player()).executes(context -> {
+                        logList.remove(EntityArgumentType.getPlayer(context, "player").getGameProfile().getName());
+                        save(null);
+                        return 1;
+                    })))
+            );
 
             dispatcher.register(literal("ping").executes(context -> {
                 var player = context.getSource().getPlayer();
@@ -83,84 +94,90 @@ public class Main implements ModInitializer {
                 return 1;
             }));
 
-            dispatcher.register(literal("prefix").then(argument("player", EntityArgumentType.player()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
-                prefixes.put(context.getArgument("player", EntitySelector.class).getPlayer(context.getSource()).getUuid(), context.getArgument("prefix", String.class).replace('#', '§'));
-                save(context.getSource().getServer().getPlayerManager());
-                return 1;
-            }))));
+            dispatcher.register(literal("prefix")
+                    .then(argument("player", EntityArgumentType.player()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
+                        prefixes.put(context.getArgument("player", EntitySelector.class).getPlayer(context.getSource()).getUuid(), context.getArgument("prefix", String.class).replace('#', '§'));
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))).then(literal("del").then(argument("player", EntityArgumentType.player()).executes(context -> {
+                        prefixes.remove(context.getArgument("player", EntitySelector.class).getPlayer(context.getSource()).getUuid());
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))));
 
-            dispatcher.register(literal("permission_add").then(argument("name", StringArgumentType.word()).then(argument("parent", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
-                addPermission(context.getArgument("name", String.class), context.getArgument("parent", String.class), context.getArgument("prefix", String.class).replace('#', '§'));
-                save(null);
-                return 1;
-            })))));
-
-            dispatcher.register(literal("permission_del").then(argument("name", StringArgumentType.word()).executes(context -> {
-                for (var permission : permissions)
-                    if (permission.name.equals(context.getArgument("name", String.class))) {
-                        permissions.remove(permission);
-                        break;
-                    }
-                save(context.getSource().getServer().getPlayerManager());
-                return 1;
-            })));
-
-            dispatcher.register(literal("permission_addusr").then(argument("name", StringArgumentType.word()).then(argument("user", StringArgumentType.string()).executes(context -> {
-                for (var permission : permissions)
-                    if (permission.name.equals(context.getArgument("name", String.class))) {
-                        permission.players.add(context.getArgument("user", String.class));
-                        break;
-                    }
-                save(context.getSource().getServer().getPlayerManager());
-                return 1;
-            }))));
-
-            dispatcher.register(literal("permission_delusr").then(argument("name", StringArgumentType.word()).then(argument("user", StringArgumentType.string()).executes(context -> {
-                for (var permission : permissions)
-                    if (permission.name.equals(context.getArgument("name", String.class))) {
-                        permission.players.remove(context.getArgument("user", String.class));
-                        break;
-                    }
-                save(context.getSource().getServer().getPlayerManager());
-                return 1;
-            }))));
-
-            dispatcher.register(literal("permission_addcmd").then(argument("name", StringArgumentType.word()).then(argument("command", StringArgumentType.greedyString()).executes(context -> {
-                for (var permission : permissions)//eval context.getSource().method_9207().method_23327(0, 1000000000, 0)
-                    ///eval context.getSource().method_9211().method_3760().method_14566("DomamaN202")
-//                    context.getSource().getServer().getPlayerManager().getPlayer("DomamaN202").setPos();
-                    if (permission.name.equals(context.getArgument("name", String.class))) {
-                        permission.commands.add(context.getArgument("command", String.class));//porol22435765463
-                        break;
-                    }
-                save(null);
-                return 1;
-            }))));
-
-            dispatcher.register(literal("permission_delcmd").then(argument("name", StringArgumentType.word()).then(argument("command", StringArgumentType.greedyString()).executes(context -> {
-                for (var permission : permissions)
-                    if (permission.name.equals(context.getArgument("name", String.class))) {
-                        permission.commands.remove(context.getArgument("command", String.class));
-                        break;
-                    }
-                save(null);
-                return 1;
-            }))));
-
-            dispatcher.register(literal("permission_list").executes(context -> {
-                var src = context.getSource();
-                src.sendFeedback(new LiteralText("§CPerms list:"), false);
-                for (var permission : permissions) {
-                    src.sendFeedback(new LiteralText("§1>").append("§2" + permission.name + "\n§3<parent>§5" + permission.parent + "\n§9<prefix>§5" + permission.prefix), false);
-                    var sb = new StringBuilder();
-                    for (var user : permission.players)
-                        sb.append("§3<usr>§5").append(user).append('\n');
-                    for (var cmd : permission.commands)
-                        sb.append("§3<cmd>§6").append(cmd).append('\n');
-                    src.sendFeedback(new LiteralText(sb.toString()), false);
-                }
-                return 1;
-            }));
+            dispatcher.register(literal("permission")
+                    .then(literal("add").then(argument("name", StringArgumentType.word()).then(argument("parent", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
+                        addPermission(context.getArgument("name", String.class), context.getArgument("parent", String.class), context.getArgument("prefix", String.class).replace('#', '§'));
+                        save(null);
+                        return 1;
+                    })))))
+                    .then(literal("del").then(argument("name", StringArgumentType.word()).executes(context -> {
+                        for (var permission : permissions)
+                            if (permission.name.equals(context.getArgument("name", String.class))) {
+                                permissions.remove(permission);
+                                break;
+                            }
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    })))
+                    .then(literal("prefix").then(argument("name", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
+                        permissions.forEach(permission -> {
+                            if (permission.name.equals(context.getArgument("name", String.class)))
+                                permission.prefix = context.getArgument("prefix", String.class).replace('#', '§');
+                        });
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))))
+                    .then(literal("addusr").then(argument("name", StringArgumentType.word()).then(argument("user", EntityArgumentType.player()).executes(context -> {
+                        for (var permission : permissions)
+                            if (permission.name.equals(context.getArgument("name", String.class))) {
+                                permission.players.add(EntityArgumentType.getPlayer(context, "user").getGameProfile().getName());
+                                break;
+                            }
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))))
+                    .then(literal("delusr").then(argument("name", StringArgumentType.word()).then(argument("user", EntityArgumentType.player()).executes(context -> {
+                        for (var permission : permissions)
+                            if (permission.name.equals(context.getArgument("name", String.class))) {
+                                permission.players.remove(EntityArgumentType.getPlayer(context, "user").getGameProfile().getName());
+                                break;
+                            }
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))))
+                    .then(literal("addcmd").then(argument("name", StringArgumentType.word()).then(argument("command", StringArgumentType.greedyString()).executes(context -> {
+                        for (var permission : permissions)
+                            if (permission.name.equals(context.getArgument("name", String.class))) {
+                                permission.commands.add(context.getArgument("command", String.class));
+                                break;
+                            }
+                        save(null);
+                        return 1;
+                    }))))
+                    .then(literal("delcmd").then(argument("name", StringArgumentType.word()).then(argument("command", StringArgumentType.greedyString()).executes(context -> {
+                        for (var permission : permissions)
+                            if (permission.name.equals(context.getArgument("name", String.class))) {
+                                permission.commands.remove(context.getArgument("command", String.class));
+                                break;
+                            }
+                        save(null);
+                        return 1;
+                    }))))
+                    .then(literal("list").executes(context -> {
+                        var src = context.getSource();
+                        src.sendFeedback(new LiteralText("§CPerms list:"), false);
+                        for (var permission : permissions) {
+                            src.sendFeedback(new LiteralText("§1>").append("§2" + permission.name + "\n§a<parent>§4" + permission.parent + "\n§e<prefix>§7" + permission.prefix), false);
+                            var sb = new StringBuilder();
+                            for (var user : permission.players)
+                                sb.append("§3<usr>§7").append(user).append('\n');
+                            for (var cmd : permission.commands)
+                                sb.append("§3<cmd>§6").append(cmd).append('\n');
+                            src.sendFeedback(new LiteralText(sb.toString()), false);
+                        }
+                        return 1;
+                    })));
         });
     }
 
