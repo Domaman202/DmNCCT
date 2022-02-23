@@ -8,13 +8,14 @@
     "EndermanEntityMixin",
     "ItemEntityMixin",
     "MessageCommandMixin",
-    "PlayerEntityMixin",
     "ScreenHandlerMixin",
     "ServerCommandSourceMixin",
     "ServerLoginNetworkHandlerMixin",
+    "ServerPlayerEntityMixin",
     "ServerPlayNetworkHandlerMixin",
     "ShearsItemMixin",
-    "SlotMixin"
+    "SlotMixin",
+    "StatusEffectInstanceMixin"
   ],
   "injectors": {
     "defaultRequire": 1

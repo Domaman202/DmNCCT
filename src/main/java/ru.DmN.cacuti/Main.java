@@ -6,8 +6,10 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 
 import java.io.*;
@@ -203,8 +205,18 @@ public class Main implements ModInitializer {
             e.printStackTrace();
         }
 
-        if (manager != null)
+        if (manager != null) {
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
+            invisibleUpdate(manager);
+        }
+    }
+
+    public static void invisibleUpdate(PlayerManager manager) {
+        for (ServerPlayerEntity player : manager.getPlayerList()) {
+            var effects = player.getStatusEffects();
+            if (effects.stream().anyMatch(it -> it.getEffectType() == StatusEffects.INVISIBILITY))
+                manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER, List.of(player)));
+        }
     }
 
     public static void addPermission(String name, String parent, String prefix) {

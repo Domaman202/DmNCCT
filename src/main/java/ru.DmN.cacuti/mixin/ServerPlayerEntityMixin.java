@@ -2,8 +2,13 @@ package ru.DmN.cacuti.mixin;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
+import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.effect.StatusEffectInstance;
+import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
@@ -11,8 +16,6 @@ import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Unit;
 import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.registry.RegistryKey;
 import net.minecraft.world.World;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -24,17 +27,12 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
+import java.util.List;
 import java.util.Random;
 
 @Mixin(ServerPlayerEntity.class)
-public abstract class PlayerEntityMixin extends PlayerEntity {
+public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Shadow @Final public MinecraftServer server;
-
-    @Shadow protected abstract boolean isBedTooFarAway(BlockPos pos, Direction direction);
-
-    @Shadow protected abstract boolean isBedObstructed(BlockPos pos, Direction direction);
-
-    @Shadow public abstract void setSpawnPoint(RegistryKey<World> dimension, @Nullable BlockPos pos, float angle, boolean forced, boolean sendMessage);
 
     @Override
     public Text getName() {
@@ -90,9 +88,40 @@ public abstract class PlayerEntityMixin extends PlayerEntity {
         }
     }
 
+    @Override
+    public void onStatusEffectApplied(StatusEffectInstance effect, @Nullable Entity source) {
+        super.onStatusEffectApplied(effect, source);
+        Main.invisibleUpdate(this.server.getPlayerManager());
+    }
+
+    @Override
+    public void onStatusEffectUpgraded(StatusEffectInstance effect, boolean reapplyEffect, @Nullable Entity source) {
+        super.onStatusEffectUpgraded(effect, reapplyEffect, source);
+        Main.invisibleUpdate(this.server.getPlayerManager());
+    }
+
+    @Override
+    public void onStatusEffectRemoved(StatusEffectInstance effect) {
+        super.onStatusEffectRemoved(effect);
+        Main.invisibleUpdate(this.server.getPlayerManager());
+        if (effect.getEffectType() == StatusEffects.INVISIBILITY)
+            this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
+    }
+
+    @Override
+    public boolean damage(DamageSource source, float amount) {
+        var x = super.damage(source, amount);
+        if (x && (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks"))) {
+            this.removeStatusEffect(StatusEffects.INVISIBILITY);
+            Main.invisibleUpdate(this.server.getPlayerManager());
+            this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
+        }
+        return x;
+    }
+
     ///
 
-    public PlayerEntityMixin(World world, BlockPos pos, float yaw, GameProfile profile) {
+    public ServerPlayerEntityMixin(World world, BlockPos pos, float yaw, GameProfile profile) {
         super(world, pos, yaw, profile);
     }
 }
