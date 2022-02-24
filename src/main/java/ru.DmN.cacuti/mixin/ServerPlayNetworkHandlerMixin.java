@@ -4,21 +4,22 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.effect.StatusEffects;
+import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
+import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
-import net.minecraft.text.TranslatableText;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
-import net.minecraft.world.GameRules;
 import net.minecraft.world.WorldView;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
@@ -39,14 +40,6 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
     @Shadow
     public ServerPlayerEntity player;
-
-    @Shadow
-    private static boolean isMovementInvalid(double x, double y, double z, float yaw, float pitch) {
-        return false;
-    }
-
-    @Shadow
-    public abstract void disconnect(Text reason);
 
     @Shadow
     private int ticks;
@@ -102,6 +95,25 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
     @Shadow
     protected abstract boolean isEntityOnAir(Entity entity);
+
+    @Shadow
+    private @Nullable Entity topmostRiddenEntity;
+
+    @Shadow
+    @Final
+    public ClientConnection connection;
+
+    @Shadow
+    private double updatedRiddenX;
+
+    @Shadow
+    private double updatedRiddenY;
+
+    @Shadow
+    private double updatedRiddenZ;
+
+    @Shadow
+    private boolean vehicleFloating;
 
     @Inject(method = "onDisconnected", at = @At("HEAD"))
     public void disconnect(Text reason, CallbackInfo ci) {
@@ -196,5 +208,46 @@ public abstract class ServerPlayNetworkHandlerMixin {
         this.updatedX = this.player.getX();
         this.updatedY = this.player.getY();
         this.updatedZ = this.player.getZ();
+    }
+
+    /**
+     * @author DomamaN202
+     */
+    @Overwrite
+    public void onVehicleMove(VehicleMoveC2SPacket packet) {
+        NetworkThreadUtils.forceMainThread(packet, (ServerPlayNetworkHandler) (Object) this, this.player.getWorld());
+        Entity entity = this.player.getRootVehicle();
+        if (entity != this.player && entity.getPrimaryPassenger() == this.player && entity == this.topmostRiddenEntity) {
+            ServerWorld serverWorld = this.player.getWorld();
+            double d = entity.getX();
+            double e = entity.getY();
+            double f = entity.getZ();
+            double g = clampHorizontal(packet.getX());
+            double h = clampVertical(packet.getY());
+            double i = clampHorizontal(packet.getZ());
+            float j = MathHelper.wrapDegrees(packet.getYaw());
+            float k = MathHelper.wrapDegrees(packet.getPitch());
+
+            boolean bl = serverWorld.isSpaceEmpty(entity, entity.getBoundingBox().contract(0.0625D));
+            double l = g - this.updatedRiddenX;
+            double m = h - this.updatedRiddenY - 1.0E-6D;
+            double n = i - this.updatedRiddenZ;
+            entity.move(MovementType.PLAYER, new Vec3d(l, m, n));
+
+            entity.updatePositionAndAngles(g, h, i, j, k);
+            boolean bl3 = serverWorld.isSpaceEmpty(entity, entity.getBoundingBox().contract(0.0625D));
+            if (bl && !bl3) {
+                entity.updatePositionAndAngles(d, e, f, j, k);
+                this.connection.send(new VehicleMoveS2CPacket(entity));
+                return;
+            }
+
+            this.player.getWorld().getChunkManager().updatePosition(this.player);
+            this.player.increaseTravelMotionStats(this.player.getX() - d, this.player.getY() - e, this.player.getZ() - f);
+            this.vehicleFloating = m >= -0.03125D && !this.server.isFlightEnabled() && this.isEntityOnAir(entity);
+            this.updatedRiddenX = entity.getX();
+            this.updatedRiddenY = entity.getY();
+            this.updatedRiddenZ = entity.getZ();
+        }
     }
 }

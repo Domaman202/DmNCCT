@@ -10,7 +10,6 @@
     "MessageCommandMixin",
     "ScreenHandlerMixin",
     "ServerCommandSourceMixin",
-    "ServerLoginNetworkHandlerMixin",
     "ServerPlayerEntityMixin",
     "ServerPlayNetworkHandlerMixin",
     "ShearsItemMixin",

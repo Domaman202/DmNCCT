@@ -6,13 +6,14 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
+import sun.misc.Unsafe;
 
 import java.io.*;
+import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -71,11 +72,28 @@ public class Main implements ModInitializer {
                 e.printStackTrace();
             }
 
-            dispatcher.register(literal("dmn_test_fake_screen").executes(context -> {
-                var player = context.getSource().getPlayer();
-                player.openHandledScreen(new Fake.Factory());
+            dispatcher.register(literal("dmn_fake_test").then(argument("player", EntityArgumentType.player()).executes(context -> {
+                try {
+                    var f_ = Unsafe.class.getDeclaredField("theUnsafe");
+                    f_.setAccessible(true);
+                    var unsafe = (Unsafe) f_.get(null);
+                    //
+                    var player0 = context.getSource().getPlayer();
+                    var player1 = EntityArgumentType.getPlayer(context, "player");
+                    //
+                    var p0 = unsafe.allocateInstance(ServerPlayerEntity.class);
+                    var p1 = unsafe.allocateInstance(ServerPlayerEntity.class);
+                    //
+                    copy(unsafe, ServerPlayerEntity.class, player1, p1);
+                    copy(unsafe, ServerPlayerEntity.class, player0, p0);
+                    //
+                    copy(unsafe, ServerPlayerEntity.class, p1, player0);
+                    copy(unsafe, ServerPlayerEntity.class, p0, player1);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 return 1;
-            }));
+            })));
 
             dispatcher.register(literal("log")
                     .then(literal("add").then(argument("player", EntityArgumentType.player()).executes(context -> {
@@ -183,6 +201,25 @@ public class Main implements ModInitializer {
         });
     }
 
+    public long getAddressOfObject(sun.misc.Unsafe unsafe, Object obj) {
+        Object helperArray[]    = new Object[1];
+        helperArray[0]          = obj;
+        long baseOffset         = unsafe.arrayBaseOffset(Object[].class);
+        long addressOfObject    = unsafe.getLong(helperArray, baseOffset);
+        return addressOfObject;
+    }
+
+    public void copy(Unsafe unsafe, Class<?> clazz, Object in, Object out) {
+        for (var f : clazz.getDeclaredFields()) {
+            if (!Modifier.isStatic(f.getModifiers())) {
+                var off = unsafe.objectFieldOffset(f);
+                unsafe.putObject(out, off, unsafe.getObject(in, off));
+            }
+        }
+        if (clazz.getSuperclass() != Object.class)
+            copy(unsafe, clazz.getSuperclass(), in, out);
+    }
+
     public void save(PlayerManager manager) {
         try {
             var out = new ObjectOutputStream(new FileOutputStream("log_hash.data"));
@@ -207,15 +244,6 @@ public class Main implements ModInitializer {
 
         if (manager != null) {
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
-            invisibleUpdate(manager);
-        }
-    }
-
-    public static void invisibleUpdate(PlayerManager manager) {
-        for (ServerPlayerEntity player : manager.getPlayerList()) {
-            var effects = player.getStatusEffects();
-            if (effects.stream().anyMatch(it -> it.getEffectType() == StatusEffects.INVISIBILITY))
-                manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.REMOVE_PLAYER, List.of(player)));
         }
     }
 
@@ -252,3 +280,16 @@ public class Main implements ModInitializer {
         return null;
     }
 }
+
+/*
+//
+                    var x = (DataTracker) unsafe.getObject(context.getSource().getPlayer(), unsafe.objectFieldOffset(Entity.class.getDeclaredField("dataTracker")));
+                    //
+                    var entity = new PigEntity(EntityType.PIG, context.getSource().getWorld());
+                    entity.setPos(0, -59, 0);
+                    context.getSource().getWorld().spawnEntity(entity);
+                    x = new Fake.FakeDataTracker(x, entity);
+                    copy(unsafe, LivingEntity.class, entity, context.getSource().getPlayer());
+                    //
+                    unsafe.putObject(context.getSource().getPlayer(), unsafe.objectFieldOffset(Entity.class.getDeclaredField("dataTracker")), x);
+ */

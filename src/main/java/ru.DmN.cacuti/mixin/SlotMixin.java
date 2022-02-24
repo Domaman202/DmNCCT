@@ -14,7 +14,6 @@ import ru.DmN.cacuti.ISHAccess;
 import ru.DmN.cacuti.ISlotAccess;
 import ru.DmN.cacuti.Main;
 
-import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 
 @Mixin(Slot.class)
@@ -28,22 +27,34 @@ public class SlotMixin implements ISlotAccess {
     ScreenHandler __dmn;
 
     @Inject(method = "takeStack", at = @At("HEAD"))
-    void take(int amount, CallbackInfoReturnable<ItemStack> cir) throws IOException {
-        if (__dmn != null) {
-            var gp = ((ISHAccess) __dmn).getDmN0().getGameProfile();
-            if (gp != null && Main.logList.contains(gp.getName())) {
-                ((ISHAccess) __dmn).getDmN().write(("id -> " + index + "\ncount -> " + amount + "\nitem -> " + this.inventory.getStack(index).getItem() + "\ninv -> " + inventory + '\n').getBytes(StandardCharsets.UTF_8));
+    void take(int amount, CallbackInfoReturnable<ItemStack> cir) {
+        try {
+            if (__dmn != null) {
+                var gp = ((ISHAccess) __dmn).getDmN0().getGameProfile();
+                if (gp != null && Main.logList.contains(gp.getName())) {
+                    ((ISHAccess) __dmn).getDmN().write(("id -> " + index + "\ncount -> " + amount + "\nitem -> " + this.inventory.getStack(index).getItem() + "\ninv -> " + inventory + '\n').getBytes(StandardCharsets.UTF_8));
+                }
             }
+        } catch (NullPointerException ignored) {
+        } catch (Exception e) {
+            System.out.println("БЕЗ ПАНИКИ!");
+            e.printStackTrace();
         }
     }
 
     @Inject(method = "insertStack(Lnet/minecraft/item/ItemStack;I)Lnet/minecraft/item/ItemStack;", at = @At(value = "INVOKE", target = "Lnet/minecraft/screen/slot/Slot;getStack()Lnet/minecraft/item/ItemStack;"))
-    void insert(ItemStack stack, int count, CallbackInfoReturnable<ItemStack> cir) throws IOException {
-        if (__dmn != null) {
-            var gp = ((ISHAccess) __dmn).getDmN0().getGameProfile();
-            if (gp != null && Main.logList.contains(gp.getName())) {
-                ((ISHAccess) __dmn).getDmN().write(("id -> " + index + "\ncount -> " + count + "\nitem -> " + stack.getItem() + "\ninv -> " + inventory + '\n').getBytes(StandardCharsets.UTF_8));
+    void insert(ItemStack stack, int count, CallbackInfoReturnable<ItemStack> cir) {
+        try {
+            if (__dmn != null) {
+                var gp = ((ISHAccess) __dmn).getDmN0().getGameProfile();
+                if (gp != null && Main.logList.contains(gp.getName())) {
+                    ((ISHAccess) __dmn).getDmN().write(("id -> " + index + "\ncount -> " + count + "\nitem -> " + stack.getItem() + "\ninv -> " + inventory + '\n').getBytes(StandardCharsets.UTF_8));
+                }
             }
+        } catch (NullPointerException ignored) {
+        } catch (Exception e) {
+            System.out.println("БЕЗ ПАНИКИ!");
+            e.printStackTrace();
         }
     }
 

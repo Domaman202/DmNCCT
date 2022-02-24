@@ -2,10 +2,8 @@ package ru.DmN.cacuti.mixin;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
-import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
-import net.minecraft.entity.effect.StatusEffectInstance;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
@@ -89,31 +87,10 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     }
 
     @Override
-    public void onStatusEffectApplied(StatusEffectInstance effect, @Nullable Entity source) {
-        super.onStatusEffectApplied(effect, source);
-        Main.invisibleUpdate(this.server.getPlayerManager());
-    }
-
-    @Override
-    public void onStatusEffectUpgraded(StatusEffectInstance effect, boolean reapplyEffect, @Nullable Entity source) {
-        super.onStatusEffectUpgraded(effect, reapplyEffect, source);
-        Main.invisibleUpdate(this.server.getPlayerManager());
-    }
-
-    @Override
-    public void onStatusEffectRemoved(StatusEffectInstance effect) {
-        super.onStatusEffectRemoved(effect);
-        Main.invisibleUpdate(this.server.getPlayerManager());
-        if (effect.getEffectType() == StatusEffects.INVISIBILITY)
-            this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
-    }
-
-    @Override
     public boolean damage(DamageSource source, float amount) {
         var x = super.damage(source, amount);
         if (x && (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks"))) {
             this.removeStatusEffect(StatusEffects.INVISIBILITY);
-            Main.invisibleUpdate(this.server.getPlayerManager());
             this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
         }
         return x;

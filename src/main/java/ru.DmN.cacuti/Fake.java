@@ -1,5 +1,8 @@
 package ru.DmN.cacuti;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.data.DataTracker;
+import net.minecraft.entity.data.TrackedData;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.inventory.Inventory;
@@ -12,6 +15,8 @@ import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import org.jetbrains.annotations.Nullable;
+
+import java.awt.dnd.DropTarget;
 
 public class Fake extends ScreenHandler {
     public Fake(ScreenHandlerType<?> type, int syncId, Inventory inv, PlayerInventory playerInventory, int rows) {
@@ -74,6 +79,34 @@ public class Fake extends ScreenHandler {
         @Override
         public ScreenHandler createMenu(int syncId, PlayerInventory inv, PlayerEntity player) {
             return new Fake(ScreenHandlerType.GENERIC_9X6, syncId, new SimpleInventory(), inv,6);
+        }
+    }
+
+    public static class FakeDataTracker extends DataTracker {
+        public DataTracker source;
+
+        public FakeDataTracker(DataTracker source, Entity entity) {
+            super(entity);
+            this.source = source;
+        }
+
+        @Override
+        public <T> T get(TrackedData<T> data) {
+            try {
+                var x = super.get(data);
+                return x == null ? source.get(data) : x;
+            } catch (Exception e) {
+                return source.get(data);
+            }
+        }
+
+        @Override
+        public <T> void set(TrackedData<T> key, T value) {
+            try {
+                super.set(key, value);
+            } catch (Exception e) {
+                source.set(key, value);
+            }
         }
     }
 }
