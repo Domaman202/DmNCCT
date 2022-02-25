@@ -6,14 +6,12 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
-import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
-import sun.misc.Unsafe;
 
 import java.io.*;
-import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -37,7 +35,8 @@ public class Main implements ModInitializer {
                 PrintStream out;
                 if (streamHash.containsKey(player.getUuid()))
                     out = streamHash.get(player.getUuid());
-                else out = new PrintStream(new FileOutputStream("./logs/break/" + player.getGameProfile().getName() + '_' + Files.list(new File("./logs/break/").toPath()).count()));
+                else
+                    out = new PrintStream(new FileOutputStream("./logs/break/" + player.getGameProfile().getName() + '_' + Files.list(new File("./logs/break/").toPath()).count()));
                 out.println("world -> " + world.getRegistryKey().getValue());
                 out.println("pos -> " + pos);
                 out.println("ppos -> " + player.getPos());
@@ -71,29 +70,18 @@ public class Main implements ModInitializer {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
-
-            dispatcher.register(literal("dmn_fake_test").then(argument("player", EntityArgumentType.player()).executes(context -> {
-                try {
-                    var f_ = Unsafe.class.getDeclaredField("theUnsafe");
-                    f_.setAccessible(true);
-                    var unsafe = (Unsafe) f_.get(null);
-                    //
-                    var player0 = context.getSource().getPlayer();
-                    var player1 = EntityArgumentType.getPlayer(context, "player");
-                    //
-                    var p0 = unsafe.allocateInstance(ServerPlayerEntity.class);
-                    var p1 = unsafe.allocateInstance(ServerPlayerEntity.class);
-                    //
-                    copy(unsafe, ServerPlayerEntity.class, player1, p1);
-                    copy(unsafe, ServerPlayerEntity.class, player0, p0);
-                    //
-                    copy(unsafe, ServerPlayerEntity.class, p1, player0);
-                    copy(unsafe, ServerPlayerEntity.class, p0, player1);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                return 1;
-            })));
+            dispatcher.register(literal("rp")
+                    .then(literal("no_author_book").executes(context -> {
+                        var stack = context.getSource().getPlayer().getMainHandStack();
+                        if (stack.getItem() == Items.WRITTEN_BOOK)
+                            stack.getNbt().putString("author", "§k*unknown*");
+                        return 1;
+                    }))
+                    .then(literal("sit").executes(context -> {
+                        dispatcher.execute("sit", context.getSource());
+                        return 1;
+                    })
+            ));
 
             dispatcher.register(literal("log")
                     .then(literal("add").then(argument("player", EntityArgumentType.player()).executes(context -> {
@@ -110,9 +98,13 @@ public class Main implements ModInitializer {
 
             dispatcher.register(literal("ping").executes(context -> {
                 var player = context.getSource().getPlayer();
-                player.sendMessage(new LiteralText("§l§aВаш пинг - §o§c" + player.pingMilliseconds), false);
+                player.sendMessage(new LiteralText("§l§aВаш пинг - §o§c" + player.pingMilliseconds + "§l§6 мс"), false);
                 return 1;
-            }));
+            }).then(argument("player", EntityArgumentType.player()).executes(context -> {
+                var player = EntityArgumentType.getPlayer(context, "player");
+                context.getSource().sendFeedback(new LiteralText("§l§aПинг игрока §o§e" + player.getName().asString() + "§l§a - §o§c" + player.pingMilliseconds + "§l§6 мс"), false);
+                return 1;
+            })));
 
             dispatcher.register(literal("prefix")
                     .then(argument("player", EntityArgumentType.player()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
@@ -199,25 +191,6 @@ public class Main implements ModInitializer {
                         return 1;
                     })));
         });
-    }
-
-    public long getAddressOfObject(sun.misc.Unsafe unsafe, Object obj) {
-        Object helperArray[]    = new Object[1];
-        helperArray[0]          = obj;
-        long baseOffset         = unsafe.arrayBaseOffset(Object[].class);
-        long addressOfObject    = unsafe.getLong(helperArray, baseOffset);
-        return addressOfObject;
-    }
-
-    public void copy(Unsafe unsafe, Class<?> clazz, Object in, Object out) {
-        for (var f : clazz.getDeclaredFields()) {
-            if (!Modifier.isStatic(f.getModifiers())) {
-                var off = unsafe.objectFieldOffset(f);
-                unsafe.putObject(out, off, unsafe.getObject(in, off));
-            }
-        }
-        if (clazz.getSuperclass() != Object.class)
-            copy(unsafe, clazz.getSuperclass(), in, out);
     }
 
     public void save(PlayerManager manager) {
