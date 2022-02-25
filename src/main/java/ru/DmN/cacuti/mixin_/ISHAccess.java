@@ -1,4 +1,4 @@
-package ru.DmN.cacuti;
+package ru.DmN.cacuti.mixin_;
 
 import net.minecraft.entity.player.PlayerEntity;
 

@@ -10,6 +10,7 @@ import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.text.LiteralText;
+import ru.DmN.cacuti.permission.Permission;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -70,6 +71,7 @@ public class Main implements ModInitializer {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+
             dispatcher.register(literal("rp")
                     .then(literal("no_author_book").executes(context -> {
                         var stack = context.getSource().getPlayer().getMainHandStack();
