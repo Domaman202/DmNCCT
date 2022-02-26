@@ -2,10 +2,12 @@ package ru.DmN.cacuti.mixin;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
+import net.minecraft.block.Block;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -31,6 +33,8 @@ import java.util.Random;
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Shadow @Final public MinecraftServer server;
+
+    @Shadow public abstract ServerWorld getWorld();
 
     @Override
     public Text getName() {
@@ -89,9 +93,18 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Override
     public boolean damage(DamageSource source, float amount) {
         var x = super.damage(source, amount);
-        if (x && (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks"))) {
-            this.removeStatusEffect(StatusEffects.INVISIBILITY);
-            this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
+        if (x) {
+            if (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks")) {
+                this.removeStatusEffect(StatusEffects.INVISIBILITY);
+                this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
+            } else if (source.name.equals("player")) {
+                var stack = this.getInventory().armor.get(2);
+                if (stack.getItem() == Items.ELYTRA) {
+                    this.getInventory().removeOne(stack);
+                    if (!this.giveItemStack(stack))
+                        Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
+                }
+            }
         }
         return x;
     }

