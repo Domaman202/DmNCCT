@@ -4,6 +4,7 @@ import com.mojang.authlib.GameProfile;
 import com.mojang.datafixers.util.Either;
 import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.damage.DamageSource;
+import net.minecraft.entity.damage.EntityDamageSource;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
@@ -22,11 +23,14 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
 import java.util.List;
 import java.util.Random;
+
+import static ru.DmN.cacuti.kill.Kill.KILL_LIST;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
@@ -94,6 +98,16 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
             this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
         }
         return x;
+    }
+
+    @Inject(method = "onDeath", at = @At("HEAD"))
+    public void onDeath(DamageSource source, CallbackInfo ci) {
+        if (source instanceof EntityDamageSource source_ && source_.getAttacker() instanceof PlayerEntity player)
+            for (var kill : KILL_LIST)
+                if (kill.target == this.getUuid() && kill.killer == null) {
+                    kill.killer = player.getUuid();
+                    break;
+                }
     }
 
     ///

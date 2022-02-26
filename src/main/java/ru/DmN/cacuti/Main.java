@@ -6,11 +6,16 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.registry.Registry;
+import ru.DmN.cacuti.kill.Kill;
+import ru.DmN.cacuti.kill.screen.KillListScreenHandler;
 import ru.DmN.cacuti.permission.Permission;
+import server.screen.InterfaceFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -19,6 +24,7 @@ import java.util.*;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
+import static ru.DmN.cacuti.kill.Kill.KILL_LIST;
 
 public class Main implements ModInitializer {
     public static Set<Permission> permissions = new LinkedHashSet<>();
@@ -82,8 +88,23 @@ public class Main implements ModInitializer {
                     .then(literal("sit").executes(context -> {
                         dispatcher.execute("sit", context.getSource());
                         return 1;
-                    })
-            ));
+                    }))
+                    .then(literal("screen").executes(context -> {
+                        try {
+                            context.getSource().getPlayer().openHandledScreen(new InterfaceFactory(new LiteralText("Список заказов"), (syncId1, inv, player) -> new KillListScreenHandler(syncId1, player)));
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        return 1;
+                    }))
+                    .then(literal("test").executes(context -> {
+                        var list = new ArrayList<ItemStack>();
+                        for (var i = 1; i < 15; i++)
+                            list.add(new ItemStack(Registry.ITEM.get(i)));
+                        KILL_LIST.add(new Kill(context.getSource().getPlayer().getUuid(), null, list));
+                        return 1;
+                    }))
+            );
 
             dispatcher.register(literal("log")
                     .then(literal("add").then(argument("player", EntityArgumentType.player()).executes(context -> {
