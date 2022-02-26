@@ -82,8 +82,7 @@ public class Main implements ModInitializer {
                     .then(literal("sit").executes(context -> {
                         dispatcher.execute("sit", context.getSource());
                         return 1;
-                    })
-            ));
+                    })));
 
             dispatcher.register(literal("log")
                     .then(literal("add").then(argument("player", EntityArgumentType.player()).executes(context -> {
