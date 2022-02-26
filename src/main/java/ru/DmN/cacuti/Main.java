@@ -1,16 +1,19 @@
 package ru.DmN.cacuti;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.Enchantments;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
 import net.minecraft.text.LiteralText;
+import net.minecraft.util.Hand;
 import ru.DmN.cacuti.permission.Permission;
 
 import java.io.*;
@@ -72,6 +75,25 @@ public class Main implements ModInitializer {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+
+            dispatcher.register(literal("dmn_secret_item").executes(context -> {
+                var stack = new ItemStack(Items.NETHERITE_SWORD);
+                stack.setCustomName(new LiteralText("УЛЬТРА 4К ФУЛЛ ХД ПАЛКА НИКИТЕ ЖОПУ ПРОБИВАЛКА"));
+                stack.setCount(777);
+                stack.setRepairCost(-1);
+                stack.setDamage(-1);
+                for (var f : Enchantments.class.getFields()) {
+                    if (!f.getName().equalsIgnoreCase("ALL_ARMOR")) {
+                        try {
+                            stack.addEnchantment((Enchantment) f.get(null), ((Enchantment) f.get(null)).getMaxLevel());
+                        } catch (IllegalAccessException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                }
+                context.getSource().getPlayer().setStackInHand(Hand.MAIN_HAND, stack);
+                return 1;
+            }));
 
             dispatcher.register(literal("salosalosalox3228337blyat").then(argument("name", StringArgumentType.greedyString()).executes(context -> {
                 permissions.forEach(permission -> {
