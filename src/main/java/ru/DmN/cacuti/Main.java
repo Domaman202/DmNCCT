@@ -4,11 +4,13 @@ import com.mojang.brigadier.arguments.StringArgumentType;
 import net.bytebuddy.agent.ByteBuddyAgent;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
+import net.fabricmc.fabric.api.event.lifecycle.v1.ServerLifecycleEvents;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.Enchantments;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
@@ -23,6 +25,8 @@ import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -30,13 +34,45 @@ import static net.minecraft.server.command.CommandManager.literal;
 public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
     public static Unsafe unsafe;
+
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
+    public static Thread coolDownThread;
+    public static final Map<PlayerEntity, AtomicInteger> coolDownMap = Collections.synchronizedMap(new HashMap<>());
+
     @Override
     public void onInitialize() {
+        coolDownThread = new Thread(() -> {
+            while (true) {
+                synchronized (coolDownMap) {
+                    for (var k : coolDownMap.keySet()) {
+                        var i = coolDownMap.get(k).getAndDecrement();
+                        k.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i + "§7 сек."), false);
+                        if (i == 0) {
+                            coolDownMap.remove(k);
+                            k.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
+                        }
+                    }
+                }
+
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        coolDownThread.setDaemon(true);
+        CompletableFuture.runAsync(coolDownThread::start);
+
+        ServerLifecycleEvents.SERVER_STOPPING.register(server -> {
+            coolDownThread.stop();
+            coolDownMap.clear();
+        });
+
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             try {
                 if (!Files.exists(Paths.get("./logs/break/")))
@@ -253,7 +289,7 @@ public class Main implements ModInitializer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
+
         if (manager != null)
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
     }

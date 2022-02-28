@@ -5,6 +5,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.MessageType;
 import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
@@ -16,24 +17,26 @@ import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.WorldView;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ru.DmN.cacuti.Main;
 
 import java.util.concurrent.CompletableFuture;
 
 @Mixin(ServerPlayNetworkHandler.class)
-public abstract class ServerPlayNetworkHandlerMixin {
+public abstract class ServerPlayNetworkHandlerMixin implements PacketListener {
     @Shadow
     @Final
     private MinecraftServer server;
@@ -115,8 +118,12 @@ public abstract class ServerPlayNetworkHandlerMixin {
     @Shadow
     private boolean vehicleFloating;
 
-    @Inject(method = "onDisconnected", at = @At("HEAD"))
-    public void disconnect(Text reason, CallbackInfo ci) {
+    @Shadow @Final private static Logger LOGGER;
+
+    @Shadow protected abstract boolean isHost();
+
+    @Override
+    public void onDisconnected(Text reason) {
         CompletableFuture.runAsync(() -> {
             try {
                 System.out.println("TIMER STARTED!");
@@ -131,6 +138,29 @@ public abstract class ServerPlayNetworkHandlerMixin {
                 e.printStackTrace();
             }
         });
+
+        LOGGER.info("{} lost connection: {}", this.player.getName().getString(), reason.getString());
+
+        var thread = new Thread(() -> {
+            try {
+                while (true) {
+                    Thread.sleep(100);
+                    synchronized (Main.coolDownMap) {
+                        if (!Main.coolDownMap.containsKey(this.player))
+                            break;
+                    }
+                }
+                this.server.forcePlayerSampleUpdate();
+                this.server.getPlayerManager().broadcast(new TranslatableText("multiplayer.player.left", this.player.getDisplayName()).formatted(Formatting.YELLOW), MessageType.SYSTEM, Util.NIL_UUID);
+                this.player.onDisconnect();
+                this.server.getPlayerManager().remove(this.player);
+                this.player.getTextStream().onDisconnect();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        });
+        thread.setDaemon(true);
+        CompletableFuture.runAsync(thread::start);
     }
 
     /**
