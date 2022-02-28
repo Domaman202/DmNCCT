@@ -4,7 +4,10 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.effect.StatusEffects;
-import net.minecraft.network.*;
+import net.minecraft.network.ClientConnection;
+import net.minecraft.network.MessageType;
+import net.minecraft.network.NetworkThreadUtils;
+import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
@@ -28,7 +31,6 @@ import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
-import ru.DmN.cacuti.FakeNet;
 import ru.DmN.cacuti.Main;
 
 import java.util.concurrent.CompletableFuture;
@@ -118,6 +120,8 @@ public abstract class ServerPlayNetworkHandlerMixin implements PacketListener {
 
     @Shadow @Final private static Logger LOGGER;
 
+    @Shadow protected abstract boolean isHost();
+
     @Override
     public void onDisconnected(Text reason) {
         CompletableFuture.runAsync(() -> {
@@ -139,14 +143,11 @@ public abstract class ServerPlayNetworkHandlerMixin implements PacketListener {
 
         var thread = new Thread(() -> {
             try {
-                if (Main.coolDownMap.containsKey(this.player)) {
-                    Main.unsafe.putObject(this.player.networkHandler, Main.unsafe.objectFieldOffset(ServerPlayNetworkHandler.class.getField("connection")), new FakeNet(NetworkSide.CLIENTBOUND));
-                    while (true) {
-                        synchronized (Main.coolDownMap) {
-                            if (Main.coolDownMap.get(this.player).get() <= 0)
-                                break;
-                        }
-                        Thread.sleep(100);
+                while (true) {
+                    Thread.sleep(100);
+                    synchronized (Main.coolDownMap) {
+                        if (!Main.coolDownMap.containsKey(this.player))
+                            break;
                     }
                 }
                 this.server.forcePlayerSampleUpdate();
@@ -154,7 +155,7 @@ public abstract class ServerPlayNetworkHandlerMixin implements PacketListener {
                 this.player.onDisconnect();
                 this.server.getPlayerManager().remove(this.player);
                 this.player.getTextStream().onDisconnect();
-            } catch (InterruptedException | NoSuchFieldException e) {
+            } catch (InterruptedException e) {
                 e.printStackTrace();
             }
         });
