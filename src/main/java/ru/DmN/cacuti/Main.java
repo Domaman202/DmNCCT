@@ -1,6 +1,7 @@
 package ru.DmN.cacuti;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
+import net.bytebuddy.agent.ByteBuddyAgent;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
@@ -15,8 +16,10 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Hand;
 import ru.DmN.cacuti.permission.Permission;
+import sun.misc.Unsafe;
 
 import java.io.*;
+import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
@@ -25,6 +28,8 @@ import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
 
 public class Main implements ModInitializer {
+    public static final Instrumentation instrumentation = ByteBuddyAgent.install();
+    public static Unsafe unsafe;
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
@@ -248,10 +253,17 @@ public class Main implements ModInitializer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        if (manager != null) {
+        
+        if (manager != null)
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
-        }
+    }
+
+    public static long getAddressOfObject(sun.misc.Unsafe unsafe, Object obj) {
+        Object[] helperArray    = new Object[1];
+        helperArray[0]          = obj;
+        long baseOffset         = unsafe.arrayBaseOffset(Object[].class);
+        long addressOfObject    = unsafe.getLong(helperArray, baseOffset);
+        return addressOfObject;
     }
 
     public static void addPermission(String name, String parent, String prefix) {
@@ -285,6 +297,16 @@ public class Main implements ModInitializer {
             if (permission.players.contains(user))
                 return permission.prefix;
         return null;
+    }
+
+    static {
+        try {
+            var f = Unsafe.class.getDeclaredField("theUnsafe");
+            f.setAccessible(true);
+            unsafe = (Unsafe) f.get(null);
+        } catch (Throwable t) {
+            t.printStackTrace();
+        }
     }
 }
 
