@@ -24,14 +24,11 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
-import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
@@ -97,39 +94,19 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     public boolean damage(DamageSource source, float amount) {
         var x = super.damage(source, amount);
         if (x) {
-            var y = source.name.equals("arrow") || source.name.equals("fireworks");
-            if (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || y) {
+            if (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks")) {
                 this.removeStatusEffect(StatusEffects.INVISIBILITY);
                 this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
-            }
-
-            if (y || source.name.equals("player")) {
+            } else if (source.name.equals("player")) {
                 var stack = this.getInventory().armor.get(2);
                 if (stack.getItem() == Items.ELYTRA) {
                     this.getInventory().removeOne(stack);
                     if (!this.giveItemStack(stack))
                         Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
                 }
-
-                Main.coolDownMap.put(this, new AtomicInteger(30));
             }
         }
         return x;
-    }
-
-    @Inject(method = "onDeath", at = @At("HEAD"))
-    public void onDeath(DamageSource source, CallbackInfo ci) throws InterruptedException {
-        super.onDeath(source);
-        synchronized (Main.coolDownMap) {
-            AtomicReference<Object> key = new AtomicReference<>();
-            Main.coolDownMap.forEach((playerEntity, atomicInteger) -> {
-                if (this.getName().equals(playerEntity.getName()))
-                    key.set(playerEntity);
-            });
-            if (key.get() != null)
-                Main.coolDownMap.remove(key.get());
-            Thread.sleep(1000);
-        }
     }
 
     ///
