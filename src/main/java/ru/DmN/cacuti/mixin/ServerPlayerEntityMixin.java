@@ -111,24 +111,28 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
                         Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
                 }
 
-                Main.coolDownMap.put(this, new AtomicInteger(30));
+                synchronized (Main.coolDownMap) {
+                    Main.coolDownMap.put(this, new AtomicInteger(30));
+                }
             }
         }
         return x;
     }
 
     @Inject(method = "onDeath", at = @At("HEAD"))
-    public void onDeath(DamageSource source, CallbackInfo ci) throws InterruptedException {
+    public void onDeath(DamageSource source, CallbackInfo ci) {
         super.onDeath(source);
         synchronized (Main.coolDownMap) {
-            AtomicReference<Object> key = new AtomicReference<>();
             Main.coolDownMap.forEach((playerEntity, atomicInteger) -> {
-                if (this.getName().equals(playerEntity.getName()))
-                    key.set(playerEntity);
+                if (this.getName().equals(playerEntity.getName())) {
+                    atomicInteger.set(0);
+                    try {
+                        Thread.sleep(100);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             });
-            if (key.get() != null)
-                Main.coolDownMap.remove(key.get());
-            Thread.sleep(1000);
         }
     }
 

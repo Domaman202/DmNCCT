@@ -51,7 +51,7 @@ public class Main implements ModInitializer {
                     for (var k : coolDownMap.keySet()) {
                         var i = coolDownMap.get(k).getAndDecrement();
                         k.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i + "§7 сек."), false);
-                        if (i == 0) {
+                        if (i <= 0) {
                             coolDownMap.remove(k);
                             k.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
                         }
