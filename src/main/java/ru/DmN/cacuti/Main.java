@@ -23,6 +23,7 @@ import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -30,10 +31,13 @@ import static net.minecraft.server.command.CommandManager.literal;
 public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
     public static Unsafe unsafe;
+
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
+
+    public static final Map<String, AtomicInteger> coolDownPlayerList = new HashMap<>();
 
     @Override
     public void onInitialize() {

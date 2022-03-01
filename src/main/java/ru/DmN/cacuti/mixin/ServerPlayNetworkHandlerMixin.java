@@ -29,6 +29,7 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ru.DmN.cacuti.Main;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -131,6 +132,13 @@ public abstract class ServerPlayNetworkHandlerMixin {
                 e.printStackTrace();
             }
         });
+
+        synchronized (Main.coolDownPlayerList) {
+            if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getName())) {
+                this.player.kill();
+                Main.coolDownPlayerList.remove(this.player.getGameProfile().getName());
+            }
+        }
     }
 
     /**

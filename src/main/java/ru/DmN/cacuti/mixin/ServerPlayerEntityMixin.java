@@ -24,17 +24,22 @@ import org.spongepowered.asm.mixin.Overwrite;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Shadow @Final public MinecraftServer server;
 
     @Shadow public abstract ServerWorld getWorld();
+
+    @Shadow public abstract void sendMessage(Text message, boolean actionBar);
 
     @Override
     public Text getName() {
@@ -93,20 +98,59 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Override
     public boolean damage(DamageSource source, float amount) {
         var x = super.damage(source, amount);
+        var y = source.name.equals("arrow");
         if (x) {
-            if (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || source.name.equals("arrow") || source.name.equals("fireworks")) {
+            if (source == DamageSource.IN_FIRE || source == DamageSource.ON_FIRE || source == DamageSource.LAVA || y) {
                 this.removeStatusEffect(StatusEffects.INVISIBILITY);
                 this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
-            } else if (source.name.equals("player")) {
-                var stack = this.getInventory().armor.get(2);
-                if (stack.getItem() == Items.ELYTRA) {
-                    this.getInventory().removeOne(stack);
-                    if (!this.giveItemStack(stack))
-                        Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
+            }
+
+            try {
+                if ((y && source.getAttacker().isPlayer()) || source.name.equals("player")) {
+                    var stack = this.getInventory().armor.get(2);
+                    if (stack.getItem() == Items.ELYTRA) {
+                        this.getInventory().removeOne(stack);
+                        if (!this.giveItemStack(stack))
+                            Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
+                    }
+
+                    synchronized (Main.coolDownPlayerList) {
+                        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
+                            Main.coolDownPlayerList.get(this.getGameProfile().getName()).set(60);
+                        else
+                            CompletableFuture.runAsync(() -> {
+                                var i = new AtomicInteger(60);
+                                synchronized (Main.coolDownPlayerList) {
+                                    Main.coolDownPlayerList.put(this.getGameProfile().getName(), i);
+                                }
+                                while (i.decrementAndGet() > 0) {
+                                    this.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i.get() + "§7 сек."), false);
+                                    try {
+                                        Thread.sleep(1000);
+                                    } catch (InterruptedException e) {
+                                        e.printStackTrace();
+                                    }
+                                }
+                                this.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
+                                synchronized (Main.coolDownPlayerList) {
+                                    Main.coolDownPlayerList.remove(this.getGameProfile().getName());
+                                }
+                            });
+                    }
                 }
+            } catch (Throwable t) {
+                t.printStackTrace();
             }
         }
         return x;
+    }
+
+    @Inject(method = "onDeath", at = @At("HEAD"))
+    public void onDeath(DamageSource source, CallbackInfo ci) {
+        super.onDeath(source);
+        synchronized (Main.coolDownPlayerList) {
+            Main.coolDownPlayerList.remove(this.getGameProfile().getName());
+        }
     }
 
     ///
