@@ -5,6 +5,7 @@ import net.minecraft.entity.Entity;
 import net.minecraft.entity.MovementType;
 import net.minecraft.entity.effect.StatusEffects;
 import net.minecraft.network.ClientConnection;
+import net.minecraft.network.MessageType;
 import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
@@ -16,11 +17,15 @@ import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.server.world.ServerWorld;
 import net.minecraft.text.Text;
+import net.minecraft.text.TranslatableText;
+import net.minecraft.util.Formatting;
+import net.minecraft.util.Util;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.world.GameMode;
 import net.minecraft.world.WorldView;
+import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.Nullable;
 import org.spongepowered.asm.mixin.Final;
 import org.spongepowered.asm.mixin.Mixin;
@@ -116,8 +121,15 @@ public abstract class ServerPlayNetworkHandlerMixin {
     @Shadow
     private boolean vehicleFloating;
 
-    @Inject(method = "onDisconnected", at = @At("HEAD"))
-    public void disconnect(Text reason, CallbackInfo ci) {
+    @Shadow @Final static Logger LOGGER;
+
+    @Shadow protected abstract boolean isHost();
+
+    /**
+     * @author DomamaN202
+     */
+    @Overwrite
+    public void onDisconnected(Text reason) {
         CompletableFuture.runAsync(() -> {
             try {
                 System.out.println("TIMER STARTED!");
@@ -133,12 +145,28 @@ public abstract class ServerPlayNetworkHandlerMixin {
             }
         });
 
-        synchronized (Main.coolDownPlayerList) {
-            if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getName())) {
-                this.player.kill();
-                Main.coolDownPlayerList.remove(this.player.getGameProfile().getName());
+        CompletableFuture.runAsync(() -> {
+            synchronized (Main.coolDownPlayerList) {
+                if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getName())) {
+                    try {
+                        Main.coolDownPlayerList.wait();
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
             }
-        }
+
+            LOGGER.info("{} lost connection: {}", this.player.getName().getString(), reason.getString());
+            this.server.forcePlayerSampleUpdate();
+            this.server.getPlayerManager().broadcast(new TranslatableText("multiplayer.player.left", this.player.getDisplayName()).formatted(Formatting.YELLOW), MessageType.SYSTEM, Util.NIL_UUID);
+            this.player.onDisconnect();
+            this.server.getPlayerManager().remove(this.player);
+            this.player.getTextStream().onDisconnect();
+            if (this.isHost()) {
+                LOGGER.info("Stopping singleplayer server as player logged out");
+                this.server.stop(false);
+            }
+        });
     }
 
     /**

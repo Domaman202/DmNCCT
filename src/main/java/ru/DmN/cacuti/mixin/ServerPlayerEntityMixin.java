@@ -30,8 +30,6 @@ import ru.DmN.cacuti.Main;
 
 import java.util.List;
 import java.util.Random;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
@@ -105,41 +103,17 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
                 this.server.getPlayerManager().sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.ADD_PLAYER, List.of((ServerPlayerEntity) (Object) this)));
             }
 
-            try {
-                if ((y && source.getAttacker().isPlayer()) || source.name.equals("player")) {
-                    var stack = this.getInventory().armor.get(2);
-                    if (stack.getItem() == Items.ELYTRA) {
-                        this.getInventory().removeOne(stack);
-                        if (!this.giveItemStack(stack))
-                            Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
-                    }
-
-                    synchronized (Main.coolDownPlayerList) {
-                        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
-                            Main.coolDownPlayerList.get(this.getGameProfile().getName()).set(60);
-                        else
-                            CompletableFuture.runAsync(() -> {
-                                var i = new AtomicInteger(60);
-                                synchronized (Main.coolDownPlayerList) {
-                                    Main.coolDownPlayerList.put(this.getGameProfile().getName(), i);
-                                }
-                                while (i.decrementAndGet() > 0) {
-                                    this.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i.get() + "§7 сек."), false);
-                                    try {
-                                        Thread.sleep(1000);
-                                    } catch (InterruptedException e) {
-                                        e.printStackTrace();
-                                    }
-                                }
-                                this.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
-                                synchronized (Main.coolDownPlayerList) {
-                                    Main.coolDownPlayerList.remove(this.getGameProfile().getName());
-                                }
-                            });
-                    }
+            if ((y && source.getAttacker().isPlayer()) || source.name.equals("player")) {
+                var stack = this.getInventory().armor.get(2);
+                if (stack.getItem() == Items.ELYTRA) {
+                    this.getInventory().removeOne(stack);
+                    if (!this.giveItemStack(stack))
+                        Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
                 }
-            } catch (Throwable t) {
-                t.printStackTrace();
+
+                if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
+                    Main.coolDownPlayerList.get(this.getGameProfile().getName()).getLeft().set(15);
+                else Main.runCooldown((ServerPlayerEntity) (Object) this, LOGGER);
             }
         }
         return x;
@@ -147,10 +121,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
 
     @Inject(method = "onDeath", at = @At("HEAD"))
     public void onDeath(DamageSource source, CallbackInfo ci) {
-        super.onDeath(source);
-        synchronized (Main.coolDownPlayerList) {
-            Main.coolDownPlayerList.remove(this.getGameProfile().getName());
-        }
+        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
+            Main.coolDownPlayerList.get(this.getGameProfile().getName()).getRight().interrupt();
     }
 
     ///

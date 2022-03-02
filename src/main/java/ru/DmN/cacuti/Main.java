@@ -13,8 +13,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.packet.s2c.play.PlayerListS2CPacket;
 import net.minecraft.server.PlayerManager;
+import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.util.Hand;
+import net.minecraft.util.Pair;
+import org.apache.logging.log4j.Logger;
 import ru.DmN.cacuti.permission.Permission;
 import sun.misc.Unsafe;
 
@@ -23,7 +26,10 @@ import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -37,7 +43,7 @@ public class Main implements ModInitializer {
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
-    public static final Map<String, AtomicInteger> coolDownPlayerList = new HashMap<>();
+    public static final Map<String, Pair<AtomicInteger, Thread>> coolDownPlayerList = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -262,7 +268,30 @@ public class Main implements ModInitializer {
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
     }
 
-    public static long getAddressOfObject(sun.misc.Unsafe unsafe, Object obj) {
+    public static void runCooldown(ServerPlayerEntity player, Logger logger) {
+        var threadRef = new AtomicReference<Thread>();
+        var thread = new Thread(() -> {
+            synchronized (Main.coolDownPlayerList) {
+                var i = new AtomicInteger(15);
+                Main.coolDownPlayerList.put(player.getGameProfile().getName(), new Pair<>(i, threadRef.get()));
+                while (i.decrementAndGet() > 0 && !threadRef.get().isInterrupted()) {
+                    player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i.get() + "§7 сек."), false);
+                    logger.info("Кд (" + player.getName().asString() + ") => " + i.get() + " сек.");
+                    try {
+                        Thread.sleep(1000);
+                    } catch (InterruptedException e) {
+                        e.printStackTrace();
+                    }
+                }
+                player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
+                Main.coolDownPlayerList.remove(player.getGameProfile().getName());
+            }
+        });
+        threadRef.set(thread);
+        CompletableFuture.runAsync(thread);
+    }
+
+    public static long getAddressOfObject(Object obj) {
         Object[] helperArray    = new Object[1];
         helperArray[0]          = obj;
         long baseOffset         = unsafe.arrayBaseOffset(Object[].class);

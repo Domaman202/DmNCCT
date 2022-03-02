@@ -8,6 +8,7 @@
     "EndermanEntityMixin",
     "ItemEntityMixin",
     "MessageCommandMixin",
+    "PlayerManagerMixin",
     "ScreenHandlerMixin",
     "ServerCommandSourceMixin",
     "ServerPlayerEntityMixin",
