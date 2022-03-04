@@ -125,6 +125,22 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
             Main.coolDownPlayerList.get(this.getGameProfile().getName()).getRight().interrupt();
     }
 
+    @Override
+    public boolean hasCustomName() {
+        return true;
+    }
+
+    @Nullable
+    @Override
+    public Text getCustomName() {
+        return this.getName();
+    }
+
+    @Override
+    public Text getDisplayName() {
+        return this.getName();
+    }
+
     ///
 
     public ServerPlayerEntityMixin(World world, BlockPos pos, float yaw, GameProfile profile) {

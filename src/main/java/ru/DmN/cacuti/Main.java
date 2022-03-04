@@ -8,9 +8,6 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
-import net.minecraft.enchantment.Enchantment;
-import net.minecraft.enchantment.Enchantments;
-import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
@@ -19,9 +16,12 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
-import net.minecraft.util.Hand;
 import net.minecraft.util.Pair;
 import org.apache.logging.log4j.Logger;
+import ru.DmN.cacuti.login.GetPlayer;
+import ru.DmN.cacuti.login.RegisteredPlayersJson;
+import ru.DmN.cacuti.login.commands.LoginCommand;
+import ru.DmN.cacuti.login.commands.RegisterCommand;
 import ru.DmN.cacuti.permission.Permission;
 import sun.misc.Unsafe;
 
@@ -31,7 +31,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -42,6 +41,8 @@ public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
     public static Unsafe unsafe;
 
+    public static final GetPlayer getPlayer = new GetPlayer();;
+
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
@@ -51,6 +52,8 @@ public class Main implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        RegisteredPlayersJson.read();
+
         PlayerBlockBreakEvents.AFTER.register((world, player, pos, state, blockEntity) -> {
             try {
                 if (!Files.exists(Paths.get("./logs/break/")))
@@ -94,6 +97,9 @@ public class Main implements ModInitializer {
             } catch (IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             }
+
+            LoginCommand.register(dispatcher);
+            RegisterCommand.register(dispatcher);
 
             dispatcher.register(literal("dmn_admin_utils").then(literal("fake_player").then(argument("name", StringArgumentType.word()).executes(context -> {
                 try {
@@ -297,22 +303,37 @@ public class Main implements ModInitializer {
         permissions.add(new Permission(name, parent, prefix));
     }
 
-    public static boolean checkAccess(String command, Permission permission) {
-        for (var cmd : permission.commands)
-            if (command.startsWith(cmd))
+    public static boolean checkAccess(String user, String command) {
+        for (var permission : permissions)
+            if (Main.checkAccess(user, command, permission, permissions, new ArrayList<>(), false))
                 return true;
         return false;
     }
 
     public static boolean checkAccess(String user, String command, Permission permission, Set<Permission> permissions, ArrayList<String> blacklist, boolean p) {
-        if ((p || permission.players.contains(user)) && checkAccess(command, permission))
-            return true;
-        if (!Objects.equals(permission.parent, "_"))
-            for (var parent : permissions)
-                if (Objects.equals(permission.parent, parent.name) && !blacklist.contains(parent.name)) {
-                    blacklist.add(parent.name);
-                    return checkAccess(user, command, parent, permissions, blacklist, true);
-                }
+        System.out.println("Daun -> " + permission.name + "\nTupoi -> " + permission.players.contains(user));
+        if (p || permission.players.contains(user)) {
+            if (checkAccess(command, permission))
+                return true;
+            if (!Objects.equals(permission.parent, "_"))
+                for (var parent : permissions)
+                    if (Objects.equals(permission.parent, parent.name) && !blacklist.contains(parent.name)) {
+                        blacklist.add(parent.name);
+                        var x = checkAccess(user, command, parent, permissions, blacklist, true);
+                        if (x)
+                            System.out.println("Govno -> " + permission.name);
+                        return x;
+                    }
+        }
+        return false;
+    }
+
+    public static boolean checkAccess(String command, Permission permission) {
+        for (var cmd : permission.commands)
+            if (command.startsWith(cmd)) {
+                System.out.println("suka -> " + permission.name);
+                return true;
+            }
         return false;
     }
 

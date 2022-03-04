@@ -9,23 +9,18 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
-import java.util.ArrayList;
-
-import static ru.DmN.cacuti.Main.permissions;
-
 @Mixin(CommandManager.class)
 public class CommandManagerMixin {
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void executeInject(ServerCommandSource commandSource, String command, CallbackInfoReturnable<Integer> cir) {
         try {
             var user = commandSource.getPlayer().getGameProfile().getName();
-            for (var permission : permissions)
-                if (Main.checkAccess(user, command, permission, permissions, new ArrayList<>(), false))
-                    return;
-            if (commandSource.getServer().isSingleplayer())
+            System.out.println("User -> " + user + "\nPerms -> " + Main.checkAccess(user, command));
+            if (Main.checkAccess(user, command))
                 return;
             commandSource.getPlayer().sendMessage(new LiteralText("§CPermissions error!"), false);
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
+            e.printStackTrace();
             return;
         } catch (Exception e) {
             e.printStackTrace();

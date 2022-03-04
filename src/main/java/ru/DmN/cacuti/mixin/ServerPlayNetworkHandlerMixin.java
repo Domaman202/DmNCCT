@@ -9,6 +9,8 @@ import net.minecraft.network.MessageType;
 import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
+import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
+import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
 import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
@@ -35,6 +37,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ru.DmN.cacuti.Main;
+import ru.DmN.cacuti.login.listeners.OnGameMessage;
+import ru.DmN.cacuti.login.listeners.OnPlayerMove;
 
 import java.util.concurrent.CompletableFuture;
 
@@ -284,6 +288,27 @@ public abstract class ServerPlayNetworkHandlerMixin {
             this.updatedRiddenX = entity.getX();
             this.updatedRiddenY = entity.getY();
             this.updatedRiddenZ = entity.getZ();
+        }
+    }
+
+    @Inject(method = "onPlayerMove", at = @At("HEAD"), cancellable = true)
+    public void onPlayerMove(PlayerMoveC2SPacket packet, CallbackInfo ci) {
+        if (!OnPlayerMove.canMove((ServerPlayNetworkHandler) (Object) this)) {
+            ci.cancel();
+        }
+    }
+
+    @Inject(method = "onPlayerAction", at = @At("HEAD"), cancellable = true)
+    public void onPlayerAction(PlayerActionC2SPacket packet, CallbackInfo ci) {
+        if (!Main.getPlayer.get(((ServerPlayNetworkHandler) (Object) this).player).get()) {
+            ci.cancel(); // TODO: breaking a block desyncs with server
+        }
+    }
+
+    @Inject(method = "onChatMessage", at = @At("HEAD"), cancellable = true)
+    public void onGameMessage(ChatMessageC2SPacket packet, CallbackInfo ci) {
+        if (!OnGameMessage.canSendMessage((ServerPlayNetworkHandler) (Object) this, packet)) {
+            ci.cancel();
         }
     }
 }
