@@ -8,6 +8,9 @@ import net.fabricmc.fabric.api.command.v1.CommandRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.PlayerBlockBreakEvents;
 import net.minecraft.command.EntitySelector;
 import net.minecraft.command.argument.EntityArgumentType;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.Enchantments;
+import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
@@ -100,6 +103,14 @@ public class Main implements ModInitializer {
 
             LoginCommand.register(dispatcher);
             RegisterCommand.register(dispatcher);
+
+            dispatcher.register(literal("twCent").executes(context -> {
+                var stack = new ItemStack(Items.POISONOUS_POTATO);
+                stack.setCustomName(new LiteralText("twCent"));
+                stack.addEnchantment(Enchantments.MENDING, 999);
+                context.getSource().getPlayer().giveItemStack(stack);
+                return 1;
+            }));
 
             dispatcher.register(literal("dmn_admin_utils").then(literal("fake_player").then(argument("name", StringArgumentType.word()).executes(context -> {
                 try {
@@ -311,7 +322,6 @@ public class Main implements ModInitializer {
     }
 
     public static boolean checkAccess(String user, String command, Permission permission, Set<Permission> permissions, ArrayList<String> blacklist, boolean p) {
-        System.out.println("Daun -> " + permission.name + "\nTupoi -> " + permission.players.contains(user));
         if (p || permission.players.contains(user)) {
             if (checkAccess(command, permission))
                 return true;
@@ -319,10 +329,7 @@ public class Main implements ModInitializer {
                 for (var parent : permissions)
                     if (Objects.equals(permission.parent, parent.name) && !blacklist.contains(parent.name)) {
                         blacklist.add(parent.name);
-                        var x = checkAccess(user, command, parent, permissions, blacklist, true);
-                        if (x)
-                            System.out.println("Govno -> " + permission.name);
-                        return x;
+                        return checkAccess(user, command, parent, permissions, blacklist, true);
                     }
         }
         return false;
@@ -330,10 +337,8 @@ public class Main implements ModInitializer {
 
     public static boolean checkAccess(String command, Permission permission) {
         for (var cmd : permission.commands)
-            if (command.startsWith(cmd)) {
-                System.out.println("suka -> " + permission.name);
+            if (command.startsWith(cmd))
                 return true;
-            }
         return false;
     }
 

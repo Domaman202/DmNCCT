@@ -83,11 +83,7 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     public void sleep(BlockPos pos) {
         super.sleep(pos);
         var pm = this.server.getPlayerManager();
-        int i = (int) pm.getPlayerList().stream().filter(LivingEntity::isSleeping).count();
-        int j = pm.getCurrentPlayerCount() / 4;
-        System.out.println(i);
-        System.out.println(j);
-        if (i > j) {
+        if ((int) pm.getPlayerList().stream().filter(LivingEntity::isSleeping).count() > pm.getCurrentPlayerCount() / 4) {
             ((ServerWorld) this.world).setTimeOfDay(0);
             ((ServerWorld) this.world).setWeather(0, 0, false, false);
         }

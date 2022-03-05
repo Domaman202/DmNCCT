@@ -14,13 +14,10 @@ public class CommandManagerMixin {
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void executeInject(ServerCommandSource commandSource, String command, CallbackInfoReturnable<Integer> cir) {
         try {
-            var user = commandSource.getPlayer().getGameProfile().getName();
-            System.out.println("User -> " + user + "\nPerms -> " + Main.checkAccess(user, command));
-            if (Main.checkAccess(user, command))
+            if (Main.checkAccess(commandSource.getPlayer().getGameProfile().getName(), command))
                 return;
             commandSource.getPlayer().sendMessage(new LiteralText("§CPermissions error!"), false);
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {
-            e.printStackTrace();
             return;
         } catch (Exception e) {
             e.printStackTrace();
