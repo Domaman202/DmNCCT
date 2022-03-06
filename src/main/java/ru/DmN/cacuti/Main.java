@@ -38,6 +38,7 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
+import static ru.DmN.cacuti.permission.Permission.addPermission;
 
 public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
@@ -304,48 +305,6 @@ public class Main implements ModInitializer {
         long baseOffset         = unsafe.arrayBaseOffset(Object[].class);
         long addressOfObject    = unsafe.getLong(helperArray, baseOffset);
         return addressOfObject;
-    }
-
-    public static void addPermission(String name, String parent, String prefix) {
-        for (var permission : permissions)
-            if (permission.name.equals(name))
-                return;
-        permissions.add(new Permission(name, parent, prefix));
-    }
-
-    public static boolean checkAccess(String user, String command) {
-        for (var permission : permissions)
-            if (Main.checkAccess(user, command, permission, permissions, new ArrayList<>(), false))
-                return true;
-        return false;
-    }
-
-    public static boolean checkAccess(String user, String command, Permission permission, Set<Permission> permissions, ArrayList<String> blacklist, boolean p) {
-        if (p || permission.players.contains(user)) {
-            if (checkAccess(command, permission))
-                return true;
-            if (!Objects.equals(permission.parent, "_"))
-                for (var parent : permissions)
-                    if (Objects.equals(permission.parent, parent.name) && !blacklist.contains(parent.name)) {
-                        blacklist.add(parent.name);
-                        return checkAccess(user, command, parent, permissions, blacklist, true);
-                    }
-        }
-        return false;
-    }
-
-    public static boolean checkAccess(String command, Permission permission) {
-        for (var cmd : permission.commands)
-            if (command.startsWith(cmd))
-                return true;
-        return false;
-    }
-
-    public static String checkPrefix(String user, Set<Permission> permissions) {
-        for (var permission : permissions)
-            if (permission.players.contains(user))
-                return permission.prefix;
-        return null;
     }
 
     static {

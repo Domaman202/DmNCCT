@@ -9,12 +9,14 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 import ru.DmN.cacuti.Main;
 
+import static ru.DmN.cacuti.permission.Permission.checkAccess;
+
 @Mixin(CommandManager.class)
 public class CommandManagerMixin {
     @Inject(method = "execute", at = @At("HEAD"), cancellable = true)
     public void executeInject(ServerCommandSource commandSource, String command, CallbackInfoReturnable<Integer> cir) {
         try {
-            if (Main.checkAccess(commandSource.getPlayer().getGameProfile().getName(), command))
+            if (checkAccess(commandSource.getPlayer().getGameProfile().getName(), command))
                 return;
             commandSource.getPlayer().sendMessage(new LiteralText("§CPermissions error!"), false);
         } catch (com.mojang.brigadier.exceptions.CommandSyntaxException e) {

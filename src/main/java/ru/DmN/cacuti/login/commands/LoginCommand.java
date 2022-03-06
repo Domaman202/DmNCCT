@@ -24,17 +24,17 @@ public class LoginCommand {
                         ServerPlayerEntity player = ctx.getSource().getPlayer();
 
                         if (!RegisteredPlayersJson.isPlayerRegistered(username)) {
-                            ctx.getSource().sendFeedback(new LiteralText("§cYou're not registered! Use /register instead."), false);
+                            ctx.getSource().sendFeedback(new LiteralText("§cВы не зарегестрированы! Используйте /register."), false);
                         } else if (RegisteredPlayersJson.isCorrectPassword(username, password)) {
                             Main.getPlayer.get(ctx.getSource().getPlayer()).set(true);
-                            ctx.getSource().sendFeedback(new LiteralText("§aLogged in."), false);
+                            ctx.getSource().sendFeedback(new LiteralText("§aВы успешно вошли."), false);
                             if (!player.isCreative()) {
                                 player.setInvulnerable(false);
                             }
                             player.networkHandler.sendPacket(new PlaySoundIdS2CPacket(new Identifier("minecraft:block.note_block.pling"), SoundCategory.MASTER, player.getPos(), 100f, 0f));
                         } else {
                             player.networkHandler.sendPacket(new PlaySoundIdS2CPacket(new Identifier("minecraft:entity.zombie.attack_iron_door"), SoundCategory.MASTER, player.getPos(), 100f, 0.5f));
-                            ctx.getSource().sendFeedback(new LiteralText("§cIncorrect password!"), false);
+                            ctx.getSource().sendFeedback(new LiteralText("§cНеверный пороль!"), false);
                         }
                         return 1;
         })));

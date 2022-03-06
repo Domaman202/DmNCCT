@@ -31,6 +31,8 @@ import ru.DmN.cacuti.Main;
 import java.util.List;
 import java.util.Random;
 
+import static ru.DmN.cacuti.permission.Permission.checkPrefix;
+
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Shadow @Final public MinecraftServer server;
@@ -43,7 +45,7 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     public Text getName() {
         var name = this.getGameProfile() != null && Main.prefixes.containsKey(this.getGameProfile().getId()) ? Main.prefixes.get(this.getGameProfile().getId()) + this.getGameProfile().getName() : this.getGameProfile().getName();
         String prefix;
-        if ((prefix = Main.checkPrefix(this.getGameProfile().getName(), Main.permissions)) != null)
+        if ((prefix = checkPrefix(this.getGameProfile().getName(), Main.permissions)) != null)
             name = prefix + name;
         return new LiteralText(name);
     }

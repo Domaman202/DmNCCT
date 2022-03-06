@@ -21,7 +21,7 @@ public class RegisterCommand {
                             ServerPlayerEntity player = ctx.getSource().getPlayer();
                             String username = player.getEntityName();
                             if (RegisteredPlayersJson.isPlayerRegistered(username)) {
-                                ctx.getSource().sendFeedback(new LiteralText("§cYou're already registered! Use /ru.DmN.cacuti.login instead."), false);
+                                ctx.getSource().sendFeedback(new LiteralText("§cВы уже зарегестрированы! Используйте /login."), false);
                                 return 1;
                             }
                             if (!password.equals(StringArgumentType.getString(ctx, "confirmPassword"))) {
@@ -32,7 +32,7 @@ public class RegisterCommand {
                             RegisteredPlayersJson.save(uuid, username, password);
                             Main.getPlayer.get(ctx.getSource().getPlayer()).set(true);
                             player.setInvulnerable(false);
-                            ctx.getSource().sendFeedback(new LiteralText("§aSuccessfully registered."), false);
+                            ctx.getSource().sendFeedback(new LiteralText("§aУспешная регистрация."), false);
                             return 1;
         }))));
     }
