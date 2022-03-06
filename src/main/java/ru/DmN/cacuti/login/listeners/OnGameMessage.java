@@ -14,7 +14,7 @@ public class OnGameMessage {
         String message = packet.getChatMessage();
         // TODO: config to allow more commands when you're not logged
         var user = networkHandler.player.getGameProfile().getName();
-        if (!playerLogin.get() && ((message.startsWith("/login") && Main.checkAccess(user, "login")) || (message.startsWith("/register") && Main.checkAccess(user, "register"))))
+        if (!playerLogin.get() && ((message.startsWith("/login") && Main.checkAccess(user, "/login")) || (message.startsWith("/register") && Main.checkAccess(user, "/register"))))
             return true;
         return playerLogin.get();
     }
