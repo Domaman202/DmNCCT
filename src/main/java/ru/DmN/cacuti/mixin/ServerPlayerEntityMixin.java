@@ -31,7 +31,8 @@ import ru.DmN.cacuti.Main;
 import java.util.List;
 import java.util.Random;
 
-import static ru.DmN.cacuti.permission.Permission.checkPrefix;
+import static ru.DmN.cacuti.Main.checkPrefix;
+import static ru.DmN.cacuti.Main.nicks;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
@@ -43,12 +44,22 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
 
     @Override
     public Text getName() {
-        var name = this.getGameProfile() != null && Main.prefixes.containsKey(this.getGameProfile().getId()) ? Main.prefixes.get(this.getGameProfile().getId()) + this.getGameProfile().getName() : this.getGameProfile().getName();
-        String prefix;
-        if ((prefix = checkPrefix(this.getGameProfile().getName(), Main.permissions)) != null)
-            name = prefix + name;
+        var profile = this.getGameProfile();
+        var name = new StringBuilder(nicks.getOrDefault(this.getGameProfile().getId(), profile.getName()));
+
         var team = this.getScoreboardTeam();
-        return team == null ? new LiteralText(name) : team.decorateName(new LiteralText(name));
+        if (team != null)
+            name = new StringBuilder(Main.toNormaString(team.decorateName(new LiteralText(name.toString()))));
+
+        var prefix = Main.prefixes.getOrDefault(this.getGameProfile().getId(), null);
+        if (prefix != null)
+            name = new StringBuilder(prefix).append(name);
+
+        var pprefix = checkPrefix(this.getGameProfile().getName(), Main.permissions);
+        if (pprefix != null)
+            name = new StringBuilder(pprefix).append(name);
+
+        return new LiteralText(name.toString());
     }
 
     /**

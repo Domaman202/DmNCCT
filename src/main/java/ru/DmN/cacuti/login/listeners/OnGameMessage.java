@@ -7,7 +7,7 @@ import ru.DmN.cacuti.Main;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static ru.DmN.cacuti.permission.Permission.checkAccess;
+import static ru.DmN.cacuti.Main.checkAccess;
 
 public class OnGameMessage {
     public static boolean canSendMessage(ServerPlayNetworkHandler networkHandler, ChatMessageC2SPacket packet) {

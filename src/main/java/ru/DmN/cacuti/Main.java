@@ -18,6 +18,8 @@ import net.minecraft.server.PlayerManager;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import net.minecraft.util.Pair;
 import org.apache.logging.log4j.Logger;
 import ru.DmN.cacuti.login.GetPlayer;
@@ -38,17 +40,16 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
-import static ru.DmN.cacuti.permission.Permission.addPermission;
 
 public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
     public static Unsafe unsafe;
 
     public static final GetPlayer getPlayer = new GetPlayer();
-    ;
 
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
+    public static Map<UUID, String> nicks = new HashMap<>();
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
@@ -102,6 +103,12 @@ public class Main implements ModInitializer {
                 e.printStackTrace();
             }
 
+            try (var file = new ObjectInputStream(new FileInputStream("nickcolor_hash.data"))) {
+                nicks = (Map<UUID, String>) file.readObject();
+            } catch (IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+
             LoginCommand.register(dispatcher);
             RegisterCommand.register(dispatcher);
 
@@ -128,6 +135,17 @@ public class Main implements ModInitializer {
                 }
                 return 1;
             }))));
+
+            dispatcher.register(literal("nick").then(argument("player", EntityArgumentType.player())
+                    .then(literal("del").executes(context -> {
+                        nicks.remove(EntityArgumentType.getPlayer(context, "player").getGameProfile().getId());
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    })).then(argument("text", StringArgumentType.greedyString()).executes(context -> {
+                        nicks.put(EntityArgumentType.getPlayer(context, "player").getGameProfile().getId(), context.getArgument("text", String.class).replace('#', '§'));
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))));
 
             dispatcher.register(literal("rp")
                     .then(literal("no_author_book").executes(context -> {
@@ -165,6 +183,10 @@ public class Main implements ModInitializer {
             })));
 
             dispatcher.register(literal("prefix")
+                    .then(literal("update").executes(context -> {
+                        save(context.getSource().getServer().getPlayerManager());
+                        return 1;
+                    }))
                     .then(argument("player", EntityArgumentType.player()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
                         prefixes.put(context.getArgument("player", EntitySelector.class).getPlayer(context.getSource()).getUuid(), context.getArgument("prefix", String.class).replace('#', '§'));
                         save(context.getSource().getServer().getPlayerManager());
@@ -260,6 +282,48 @@ public class Main implements ModInitializer {
         });
     }
 
+    public static String toNormaString(Text text) {
+        var sb = new StringBuilder();
+        var style = text.getStyle();
+
+        var color = style.getColor();
+        if (color != null) {
+            sb.append('§');
+            for (var format : Formatting.values()) {
+                var cv = format.getColorValue();
+                if (cv != null && cv == color.getRgb())
+                    sb.append(format.getCode());
+            }
+        }
+
+        if (style.isObfuscated()) {
+            sb.append("§k");
+        }
+
+        if (style.isBold()) {
+            sb.append("§l");
+        }
+
+        if (style.isStrikethrough()) {
+            sb.append("§m");
+        }
+
+        if (style.isUnderlined()) {
+            sb.append("§n");
+        }
+
+        if (style.isItalic()) {
+            sb.append("§o");
+        }
+
+        sb.append(text.asString());
+
+        for (var t : text.getSiblings())
+            sb.append(toNormaString(t));
+
+        return sb.toString();
+    }
+
     public void save(PlayerManager manager) {
         try {
             var out = new ObjectOutputStream(new FileOutputStream("log_hash.data"));
@@ -278,6 +342,12 @@ public class Main implements ModInitializer {
 
         try (var file = new ObjectOutputStream(new FileOutputStream("perms_hash.data"))) {
             file.writeObject(permissions);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        try (var file = new ObjectOutputStream(new FileOutputStream("nickcolor_hash.data"))) {
+            file.writeObject(nicks);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -317,6 +387,48 @@ public class Main implements ModInitializer {
         return addressOfObject;
     }
 
+    public static void addPermission(String name, String parent, String prefix) {
+        for (var permission : permissions)
+            if (permission.name.equals(name))
+                return;
+        permissions.add(new Permission(name, parent, prefix));
+    }
+
+    public static boolean checkAccess(String user, String command) {
+        for (var permission : permissions)
+            if (checkAccess(user, command, permission, permissions, new ArrayList<>(), false))
+                return true;
+        return false;
+    }
+
+    public static boolean checkAccess(String user, String command, Permission permission, Set<Permission> permissions, ArrayList<String> blacklist, boolean p) {
+        if (p || permission.players.contains(user)) {
+            if (checkAccess(command, permission))
+                return true;
+            if (!Objects.equals(permission.parent, "_"))
+                for (var parent : permissions)
+                    if (Objects.equals(permission.parent, parent.name) && !blacklist.contains(parent.name)) {
+                        blacklist.add(parent.name);
+                        return checkAccess(user, command, parent, permissions, blacklist, true);
+                    }
+        }
+        return false;
+    }
+
+    public static boolean checkAccess(String command, Permission permission) {
+        for (var cmd : permission.commands)
+            if (command.startsWith(cmd))
+                return true;
+        return false;
+    }
+
+    public static String checkPrefix(String user, Set<Permission> permissions) {
+        for (var permission : permissions)
+            if (permission.players.contains(user))
+                return permission.prefix;
+        return null;
+    }
+
     static {
         try {
             var f = Unsafe.class.getDeclaredField("theUnsafe");
@@ -327,16 +439,3 @@ public class Main implements ModInitializer {
         }
     }
 }
-
-/*
-//
-                    var x = (DataTracker) unsafe.getObject(context.getSource().getPlayer(), unsafe.objectFieldOffset(Entity.class.getDeclaredField("dataTracker")));
-                    //
-                    var entity = new PigEntity(EntityType.PIG, context.getSource().getWorld());
-                    entity.setPos(0, -59, 0);
-                    context.getSource().getWorld().spawnEntity(entity);
-                    x = new Fake.FakeDataTracker(x, entity);
-                    copy(unsafe, LivingEntity.class, entity, context.getSource().getPlayer());
-                    //
-                    unsafe.putObject(context.getSource().getPlayer(), unsafe.objectFieldOffset(Entity.class.getDeclaredField("dataTracker")), x);
- */

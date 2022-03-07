@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static ru.DmN.cacuti.permission.Permission.checkAccess;
+import static ru.DmN.cacuti.Main.checkAccess;
 
 @Mixin(CommandManager.class)
 public class CommandManagerMixin {
