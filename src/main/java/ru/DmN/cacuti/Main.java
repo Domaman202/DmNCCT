@@ -44,7 +44,8 @@ public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
     public static Unsafe unsafe;
 
-    public static final GetPlayer getPlayer = new GetPlayer();;
+    public static final GetPlayer getPlayer = new GetPlayer();
+    ;
 
     public static Set<Permission> permissions = new LinkedHashSet<>();
     public static Map<UUID, String> prefixes = new HashMap<>();
@@ -122,7 +123,7 @@ public class Main implements ModInitializer {
                     var f = PlayerManager.class.getDeclaredField("players");
                     f.setAccessible(true);
                     ((List<ServerPlayerEntity>) f.get(pm)).add(player);
-                } catch (Throwable t)  {
+                } catch (Throwable t) {
                     t.printStackTrace();
                 }
                 return 1;
@@ -189,14 +190,23 @@ public class Main implements ModInitializer {
                         save(context.getSource().getServer().getPlayerManager());
                         return 1;
                     })))
-                    .then(literal("prefix").then(argument("name", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
-                        permissions.forEach(permission -> {
-                            if (permission.name.equals(context.getArgument("name", String.class)))
-                                permission.prefix = context.getArgument("prefix", String.class).replace('#', '§');
-                        });
-                        save(context.getSource().getServer().getPlayerManager());
-                        return 1;
-                    }))))
+                    .then(literal("prefix")
+                            .then(argument("name", StringArgumentType.word()).then(argument("prefix", StringArgumentType.greedyString()).executes(context -> {
+                                permissions.forEach(permission -> {
+                                    if (permission.name.equals(context.getArgument("name", String.class)))
+                                        permission.prefix = context.getArgument("prefix", String.class).replace('#', '§');
+                                });
+                                save(context.getSource().getServer().getPlayerManager());
+                                return 1;
+                            })))
+                            .then(literal("del").then(argument("name", StringArgumentType.word()).executes(context -> {
+                                permissions.forEach(permission -> {
+                                    if (permission.name.equals(context.getArgument("name", String.class)))
+                                        permission.prefix = "";
+                                });
+                                save(context.getSource().getServer().getPlayerManager());
+                                return 1;
+                            }))))
                     .then(literal("addusr").then(argument("name", StringArgumentType.word()).then(argument("user", EntityArgumentType.player()).executes(context -> {
                         for (var permission : permissions)
                             if (permission.name.equals(context.getArgument("name", String.class))) {
@@ -271,7 +281,7 @@ public class Main implements ModInitializer {
         } catch (IOException e) {
             e.printStackTrace();
         }
-        
+
         if (manager != null)
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
     }
@@ -300,10 +310,10 @@ public class Main implements ModInitializer {
     }
 
     public static long getAddressOfObject(Object obj) {
-        Object[] helperArray    = new Object[1];
-        helperArray[0]          = obj;
-        long baseOffset         = unsafe.arrayBaseOffset(Object[].class);
-        long addressOfObject    = unsafe.getLong(helperArray, baseOffset);
+        Object[] helperArray = new Object[1];
+        helperArray[0] = obj;
+        long baseOffset = unsafe.arrayBaseOffset(Object[].class);
+        long addressOfObject = unsafe.getLong(helperArray, baseOffset);
         return addressOfObject;
     }
 

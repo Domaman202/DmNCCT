@@ -47,7 +47,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         String prefix;
         if ((prefix = checkPrefix(this.getGameProfile().getName(), Main.permissions)) != null)
             name = prefix + name;
-        return new LiteralText(name);
+        var team = this.getScoreboardTeam();
+        return team == null ? new LiteralText(name) : team.decorateName(new LiteralText(name));
     }
 
     /**
