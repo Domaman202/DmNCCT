@@ -78,15 +78,10 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         if (this.world.isDay()) {
             super.sleep(pos);
             var pm = this.server.getPlayerManager();
-            int i = (int) pm.getPlayerList().stream().filter(LivingEntity::isSleeping).count();
-            int j = pm.getCurrentPlayerCount() / 4;
-            System.out.println(i);
-            System.out.println(j);
-            if (i > j) {
+            if ((int) pm.getPlayerList().stream().filter(LivingEntity::isSleeping).count() > (pm.getCurrentPlayerCount() / 4)) {
                 ((ServerWorld) this.world).setTimeOfDay(13000);
-                var rand = new Random();
-                var t = rand.nextBoolean();
-                ((ServerWorld) this.world).setWeather(0, 0, rand.nextBoolean() || t, t);
+                var t = Math.random() < 0.25;
+                ((ServerWorld) this.world).setWeather(0, 0, Math.random() < 0.5 || t, t);
             }
             cir.setReturnValue(Either.right(Unit.INSTANCE));
             cir.cancel();
@@ -99,7 +94,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
         var pm = this.server.getPlayerManager();
         if ((int) pm.getPlayerList().stream().filter(LivingEntity::isSleeping).count() > pm.getCurrentPlayerCount() / 4) {
             ((ServerWorld) this.world).setTimeOfDay(0);
-            ((ServerWorld) this.world).setWeather(0, 0, false, false);
+            var t = Math.random() < 0.25;
+            ((ServerWorld) this.world).setWeather(0, 0, Math.random() < 0.5 || t, t);
         }
     }
 
