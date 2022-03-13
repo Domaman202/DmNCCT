@@ -15,7 +15,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.DmN.cacuti.Helper;
 import ru.DmN.cacuti.Main;
 
 import java.net.SocketAddress;
@@ -28,7 +27,7 @@ public class PlayerManagerMixin {
     @Inject(method = "checkCanJoin", at = @At("HEAD"), cancellable = true)
     void connectJoin(SocketAddress address, GameProfile profile, CallbackInfoReturnable<Text> cir) {
         if (Main.coolDownPlayerList.containsKey(profile.getId())) {
-            unsafe.putIntVolatile(Main.coolDownPlayerList.get(profile.getId()), Helper.OFFSET_I, 0);
+            unsafe.putInt(Main.coolDownPlayerList.get(profile.getId()), 0);
             cir.setReturnValue(null);
             cir.cancel();
         }

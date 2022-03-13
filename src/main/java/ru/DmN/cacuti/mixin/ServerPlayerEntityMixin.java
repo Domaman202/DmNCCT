@@ -26,7 +26,6 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.DmN.cacuti.Helper;
 import ru.DmN.cacuti.Main;
 
 import java.util.List;
@@ -126,7 +125,7 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
     @Inject(method = "onDeath", at = @At("HEAD"))
     public void onDeath(DamageSource source, CallbackInfo ci) {
         if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getId()))
-            unsafe.putIntVolatile(Main.coolDownPlayerList.get(this.getGameProfile().getId()), Helper.OFFSET_I, 0);
+            unsafe.putInt(Main.coolDownPlayerList.get(this.getGameProfile().getId()), 0);
     }
 
     @Override

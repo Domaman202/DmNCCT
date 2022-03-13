@@ -36,7 +36,6 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ru.DmN.cacuti.Helper;
 import ru.DmN.cacuti.Main;
 import ru.DmN.cacuti.login.listeners.OnGameMessage;
 import ru.DmN.cacuti.login.listeners.OnPlayerMove;
@@ -151,7 +150,7 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
         CompletableFuture.runAsync(() -> {
             if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getId())) {
-                while (unsafe.getIntVolatile(Main.coolDownPlayerList.get(this.player.getGameProfile().getId()), Helper.OFFSET_I) > 1) {
+                while (unsafe.getInt(Main.coolDownPlayerList.get(this.player.getGameProfile().getId())) > 1) {
                     try {
                         Thread.sleep(100);
                     } catch (InterruptedException e) {

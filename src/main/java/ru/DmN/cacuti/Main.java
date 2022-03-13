@@ -49,7 +49,7 @@ public class Main implements ModInitializer {
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
-    public static final Map<UUID, Helper> coolDownPlayerList = new HashMap<>();
+    public static final Map<UUID, Long> coolDownPlayerList = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -354,22 +354,22 @@ public class Main implements ModInitializer {
 
     public static void runCooldown(ServerPlayerEntity player) {
         CompletableFuture.runAsync(() -> {
-            Helper obj;
+            long addr;
             if (Main.coolDownPlayerList.containsKey(player.getGameProfile().getId())) {
-                obj = Main.coolDownPlayerList.get(player.getGameProfile().getId());
-                unsafe.putIntVolatile(obj, Helper.OFFSET_I, 15);
-                if (unsafe.getObjectVolatile(obj, Helper.OFFSET_LOCK) != null)
+                addr = Main.coolDownPlayerList.get(player.getGameProfile().getId());
+                unsafe.putInt(addr, 15);
+                if (unsafe.getInt(addr + 4) != 0)
                     return;
             } else {
-                obj = new Helper();
-                Main.coolDownPlayerList.put(player.getGameProfile().getId(), obj);
-                unsafe.putIntVolatile(obj, Helper.OFFSET_I, 15);
+                addr = unsafe.allocateMemory(8);
+                Main.coolDownPlayerList.put(player.getGameProfile().getId(), addr);
+                unsafe.putInt(addr, 15);
             }
 
-            while (unsafe.getIntVolatile(obj, Helper.OFFSET_I) > 0) {
-                unsafe.putObjectVolatile(obj, Helper.OFFSET_LOCK, obj);
-                var x = unsafe.getIntVolatile(obj, Helper.OFFSET_I) - 1;
-                unsafe.putIntVolatile(obj, Helper.OFFSET_I, x);
+            while (unsafe.getInt(addr) > 0) {
+                unsafe.putInt(addr + 4, Thread.currentThread().hashCode());
+                var x = unsafe.getInt(addr) - 1;
+                unsafe.putInt(addr, x);
                 player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
                 System.out.println("Кд (" + player.getName().asString() + ") => " + x + " сек.");
                 try {
@@ -379,7 +379,7 @@ public class Main implements ModInitializer {
                 }
             }
 
-            unsafe.putObjectVolatile(obj, Helper.OFFSET_LOCK, null);
+            unsafe.putInt(addr + 4, 0);
             player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
         });
     }
@@ -439,9 +439,6 @@ public class Main implements ModInitializer {
             var f = Unsafe.class.getDeclaredField("theUnsafe");
             f.setAccessible(true);
             unsafe = (Unsafe) f.get(null);
-
-            Helper.OFFSET_I = unsafe.objectFieldOffset(Helper.class.getField("i"));
-            Helper.OFFSET_LOCK = unsafe.objectFieldOffset(Helper.class.getField("lock"));
         } catch (Throwable t) {
             t.printStackTrace();
         }
