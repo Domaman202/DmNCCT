@@ -2,6 +2,7 @@ package ru.DmN.cacuti.login.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
+import org.apache.logging.log4j.core.Logger;
 import ru.DmN.cacuti.Main;
 import ru.DmN.cacuti.login.RegisteredPlayersJson;
 import net.minecraft.network.packet.s2c.play.PlaySoundIdS2CPacket;
@@ -28,6 +29,7 @@ public class LoginCommand {
                         } else if (RegisteredPlayersJson.isCorrectPassword(username, password)) {
                             Main.getPlayer.get(ctx.getSource().getPlayer()).set(true);
                             ctx.getSource().sendFeedback(new LiteralText("§aВы успешно вошли."), false);
+                            Main.runCooldown(ctx.getSource().getPlayer());
                             if (!player.isCreative()) {
                                 player.setInvulnerable(false);
                             }

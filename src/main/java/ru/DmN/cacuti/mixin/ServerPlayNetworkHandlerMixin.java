@@ -36,11 +36,14 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import ru.DmN.cacuti.Helper;
 import ru.DmN.cacuti.Main;
 import ru.DmN.cacuti.login.listeners.OnGameMessage;
 import ru.DmN.cacuti.login.listeners.OnPlayerMove;
 
 import java.util.concurrent.CompletableFuture;
+
+import static ru.DmN.cacuti.Main.unsafe;
 
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {
@@ -136,11 +139,8 @@ public abstract class ServerPlayNetworkHandlerMixin {
     public void onDisconnected(Text reason) {
         CompletableFuture.runAsync(() -> {
             try {
-                System.out.println("TIMER STARTED!");
                 Thread.sleep(15 * 1000);
-                System.out.println("TIMER COMPLETE!");
                 if (this.server.getPlayerManager().getCurrentPlayerCount() == 0) {
-                    System.out.println("STOPPING SERVER!");
                     this.server.getCommandManager().getDispatcher().execute("stop", this.server.getCommandSource());
                     System.exit(1);
                 }
@@ -150,10 +150,10 @@ public abstract class ServerPlayNetworkHandlerMixin {
         });
 
         CompletableFuture.runAsync(() -> {
-            synchronized (Main.coolDownPlayerList) {
-                if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getName())) {
+            if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getId())) {
+                while (unsafe.getIntVolatile(Main.coolDownPlayerList.get(this.player.getGameProfile().getId()), Helper.OFFSET_I) > 1) {
                     try {
-                        Main.coolDownPlayerList.wait();
+                        Thread.sleep(100);
                     } catch (InterruptedException e) {
                         e.printStackTrace();
                     }

@@ -20,8 +20,6 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import net.minecraft.util.Pair;
-import org.apache.logging.log4j.Logger;
 import ru.DmN.cacuti.login.GetPlayer;
 import ru.DmN.cacuti.login.RegisteredPlayersJson;
 import ru.DmN.cacuti.login.commands.LoginCommand;
@@ -35,8 +33,6 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicReference;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -53,7 +49,7 @@ public class Main implements ModInitializer {
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
-    public static final Map<String, Pair<AtomicInteger, Thread>> coolDownPlayerList = new HashMap<>();
+    public static final Map<UUID, Helper> coolDownPlayerList = new HashMap<>();
 
     @Override
     public void onInitialize() {
@@ -356,27 +352,36 @@ public class Main implements ModInitializer {
             manager.sendToAll(new PlayerListS2CPacket(PlayerListS2CPacket.Action.UPDATE_DISPLAY_NAME, manager.getPlayerList()));
     }
 
-    public static void runCooldown(ServerPlayerEntity player, Logger logger) {
-        var threadRef = new AtomicReference<Thread>();
-        var thread = new Thread(() -> {
-            synchronized (Main.coolDownPlayerList) {
-                var i = new AtomicInteger(15);
-                Main.coolDownPlayerList.put(player.getGameProfile().getName(), new Pair<>(i, threadRef.get()));
-                while (i.decrementAndGet() > 0 && !threadRef.get().isInterrupted()) {
-                    player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + i.get() + "§7 сек."), false);
-                    logger.info("Кд (" + player.getName().asString() + ") => " + i.get() + " сек.");
-                    try {
-                        Thread.sleep(1000);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
-                Main.coolDownPlayerList.remove(player.getGameProfile().getName());
+    public static void runCooldown(ServerPlayerEntity player) {
+        CompletableFuture.runAsync(() -> {
+            Helper obj;
+            if (Main.coolDownPlayerList.containsKey(player.getGameProfile().getId())) {
+                obj = Main.coolDownPlayerList.get(player.getGameProfile().getId());
+                unsafe.putIntVolatile(obj, Helper.OFFSET_I, 15);
+                if (unsafe.getObjectVolatile(obj, Helper.OFFSET_LOCK) != null)
+                    return;
+            } else {
+                obj = new Helper();
+                Main.coolDownPlayerList.put(player.getGameProfile().getId(), obj);
+                unsafe.putIntVolatile(obj, Helper.OFFSET_I, 15);
             }
+
+            while (unsafe.getIntVolatile(obj, Helper.OFFSET_I) > 0) {
+                unsafe.putObjectVolatile(obj, Helper.OFFSET_LOCK, obj);
+                var x = unsafe.getIntVolatile(obj, Helper.OFFSET_I) - 1;
+                unsafe.putIntVolatile(obj, Helper.OFFSET_I, x);
+                player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
+                System.out.println("Кд (" + player.getName().asString() + ") => " + x + " сек.");
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+
+            unsafe.putObjectVolatile(obj, Helper.OFFSET_LOCK, null);
+            player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
         });
-        threadRef.set(thread);
-        CompletableFuture.runAsync(thread);
     }
 
     public static long getAddressOfObject(Object obj) {
@@ -434,6 +439,9 @@ public class Main implements ModInitializer {
             var f = Unsafe.class.getDeclaredField("theUnsafe");
             f.setAccessible(true);
             unsafe = (Unsafe) f.get(null);
+
+            Helper.OFFSET_I = unsafe.objectFieldOffset(Helper.class.getField("i"));
+            Helper.OFFSET_LOCK = unsafe.objectFieldOffset(Helper.class.getField("lock"));
         } catch (Throwable t) {
             t.printStackTrace();
         }

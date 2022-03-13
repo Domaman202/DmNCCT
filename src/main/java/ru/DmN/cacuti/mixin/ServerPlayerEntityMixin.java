@@ -26,13 +26,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
+import ru.DmN.cacuti.Helper;
 import ru.DmN.cacuti.Main;
 
 import java.util.List;
-import java.util.Random;
 
-import static ru.DmN.cacuti.Main.checkPrefix;
-import static ru.DmN.cacuti.Main.nicks;
+import static ru.DmN.cacuti.Main.*;
 
 @Mixin(ServerPlayerEntity.class)
 public abstract class ServerPlayerEntityMixin extends PlayerEntity {
@@ -117,9 +116,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
                         Block.dropStack(this.getWorld(), this.getBlockPos(), stack);
                 }
 
-                if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
-                    Main.coolDownPlayerList.get(this.getGameProfile().getName()).getLeft().set(15);
-                else Main.runCooldown((ServerPlayerEntity) (Object) this, LOGGER);
+                if (this.getHealth() - amount > 0)
+                    Main.runCooldown((ServerPlayerEntity) (Object) this);
             }
         }
         return x;
@@ -127,8 +125,8 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
 
     @Inject(method = "onDeath", at = @At("HEAD"))
     public void onDeath(DamageSource source, CallbackInfo ci) {
-        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getName()))
-            Main.coolDownPlayerList.get(this.getGameProfile().getName()).getRight().interrupt();
+        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getId()))
+            unsafe.putIntVolatile(Main.coolDownPlayerList.get(this.getGameProfile().getId()), Helper.OFFSET_I, 0);
     }
 
     @Override
