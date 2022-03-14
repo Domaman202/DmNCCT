@@ -1,4 +1,4 @@
-package ru.DmN.cacuti;
+package ru.DmN.cct;
 
 import com.mojang.authlib.GameProfile;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -20,11 +20,11 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import ru.DmN.cacuti.login.GetPlayer;
-import ru.DmN.cacuti.login.RegisteredPlayersJson;
-import ru.DmN.cacuti.login.commands.LoginCommand;
-import ru.DmN.cacuti.login.commands.RegisterCommand;
-import ru.DmN.cacuti.permission.Permission;
+import ru.DmN.cct.login.GetPlayer;
+import ru.DmN.cct.login.RegisteredPlayersJson;
+import ru.DmN.cct.login.commands.LoginCommand;
+import ru.DmN.cct.login.commands.RegisterCommand;
+import ru.DmN.cct.permission.Permission;
 import sun.misc.Unsafe;
 
 import java.io.*;

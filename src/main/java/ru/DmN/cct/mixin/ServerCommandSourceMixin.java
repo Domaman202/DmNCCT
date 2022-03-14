@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import com.mojang.brigadier.ResultConsumer;
 import net.minecraft.command.argument.EntityAnchorArgumentType;

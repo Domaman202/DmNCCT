@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.server.command.MessageCommand;

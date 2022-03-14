@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import net.minecraft.server.command.CommandManager;
 import net.minecraft.server.command.ServerCommandSource;
@@ -8,7 +8,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-import static ru.DmN.cacuti.Main.checkAccess;
+import static ru.DmN.cct.Main.checkAccess;
 
 @Mixin(CommandManager.class)
 public class CommandManagerMixin {

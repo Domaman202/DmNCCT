@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import net.minecraft.entity.EntityType;
 import net.minecraft.entity.decoration.AbstractDecorationEntity;

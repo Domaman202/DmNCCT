@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import net.minecraft.inventory.Inventory;
 import net.minecraft.item.ItemStack;
@@ -10,9 +10,9 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.DmN.cacuti.mixin_.ISHAccess;
-import ru.DmN.cacuti.mixin_.ISlotAccess;
-import ru.DmN.cacuti.Main;
+import ru.DmN.cct.mixin_.ISHAccess;
+import ru.DmN.cct.mixin_.ISlotAccess;
+import ru.DmN.cct.Main;
 
 import java.nio.charset.StandardCharsets;
 

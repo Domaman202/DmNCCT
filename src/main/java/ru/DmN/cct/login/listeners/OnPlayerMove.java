@@ -1,9 +1,9 @@
-package ru.DmN.cacuti.login.listeners;
+package ru.DmN.cct.login.listeners;
 
 import net.minecraft.entity.Entity;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-import ru.DmN.cacuti.Main;
+import ru.DmN.cct.Main;
 
 public class OnPlayerMove {
     public static boolean canMove(ServerPlayNetworkHandler networkHandler) {

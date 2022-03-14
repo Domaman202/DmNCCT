@@ -1,10 +1,9 @@
-package ru.DmN.cacuti.login.commands;
+package ru.DmN.cct.login.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import org.apache.logging.log4j.core.Logger;
-import ru.DmN.cacuti.Main;
-import ru.DmN.cacuti.login.RegisteredPlayersJson;
+import ru.DmN.cct.Main;
+import ru.DmN.cct.login.RegisteredPlayersJson;
 import net.minecraft.network.packet.s2c.play.PlaySoundIdS2CPacket;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;

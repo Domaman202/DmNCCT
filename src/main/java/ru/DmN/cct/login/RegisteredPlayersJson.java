@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.login;
+package ru.DmN.cct.login;
 
 import com.google.common.io.Files;
 import com.google.gson.Gson;

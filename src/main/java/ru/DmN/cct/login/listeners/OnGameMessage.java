@@ -1,13 +1,13 @@
-package ru.DmN.cacuti.login.listeners;
+package ru.DmN.cct.login.listeners;
 
 import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
 import net.minecraft.server.network.ServerPlayerEntity;
-import ru.DmN.cacuti.Main;
+import ru.DmN.cct.Main;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static ru.DmN.cacuti.Main.checkAccess;
+import static ru.DmN.cct.Main.checkAccess;
 
 public class OnGameMessage {
     public static boolean canSendMessage(ServerPlayNetworkHandler networkHandler, ChatMessageC2SPacket packet) {

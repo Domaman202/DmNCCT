@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin_;
+package ru.DmN.cct.mixin_;
 
 import net.minecraft.screen.ScreenHandler;
 

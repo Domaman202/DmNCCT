@@ -1,4 +1,4 @@
-package ru.DmN.cacuti.mixin;
+package ru.DmN.cct.mixin;
 
 import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import net.minecraft.entity.Entity;
@@ -36,13 +36,13 @@ import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
-import ru.DmN.cacuti.Main;
-import ru.DmN.cacuti.login.listeners.OnGameMessage;
-import ru.DmN.cacuti.login.listeners.OnPlayerMove;
+import ru.DmN.cct.Main;
+import ru.DmN.cct.login.listeners.OnGameMessage;
+import ru.DmN.cct.login.listeners.OnPlayerMove;
 
 import java.util.concurrent.CompletableFuture;
 
-import static ru.DmN.cacuti.Main.unsafe;
+import static ru.DmN.cct.Main.unsafe;
 
 @Mixin(ServerPlayNetworkHandler.class)
 public abstract class ServerPlayNetworkHandlerMixin {

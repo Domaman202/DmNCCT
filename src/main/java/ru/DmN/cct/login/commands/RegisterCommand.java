@@ -1,9 +1,9 @@
-package ru.DmN.cacuti.login.commands;
+package ru.DmN.cct.login.commands;
 
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
-import ru.DmN.cacuti.Main;
-import ru.DmN.cacuti.login.RegisteredPlayersJson;
+import ru.DmN.cct.Main;
+import ru.DmN.cct.login.RegisteredPlayersJson;
 import net.minecraft.server.command.ServerCommandSource;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.LiteralText;
