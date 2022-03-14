@@ -43,7 +43,7 @@ import static net.minecraft.server.command.CommandManager.literal;
 
 public class Main implements ModInitializer {
     public static final Instrumentation instrumentation = ByteBuddyAgent.install();
-    public static Unsafe unsafe;
+    public static Unsafe unsafe = getUnsafe();
 
     public static final GetPlayer getPlayer = new GetPlayer();
 
@@ -438,13 +438,14 @@ public class Main implements ModInitializer {
         return null;
     }
 
-    static {
+    private static Unsafe getUnsafe() {
         try {
             var f = Unsafe.class.getDeclaredField("theUnsafe");
             f.setAccessible(true);
-            unsafe = (Unsafe) f.get(null);
+            return (Unsafe) f.get(null);
         } catch (Throwable t) {
             t.printStackTrace();
+            return null;
         }
     }
 }
