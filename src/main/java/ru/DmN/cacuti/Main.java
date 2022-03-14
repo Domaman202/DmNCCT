@@ -32,7 +32,11 @@ import java.lang.instrument.Instrumentation;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.ScheduledFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static net.minecraft.server.command.CommandManager.argument;
 import static net.minecraft.server.command.CommandManager.literal;
@@ -49,6 +53,7 @@ public class Main implements ModInitializer {
     public static Set<String> logList = new LinkedHashSet<>();
     public static Map<UUID, PrintStream> streamHash = new HashMap<>();
 
+    public static final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
     public static final Map<UUID, Long> coolDownPlayerList = new HashMap<>();
 
     @Override
@@ -353,35 +358,34 @@ public class Main implements ModInitializer {
     }
 
     public static void runCooldown(ServerPlayerEntity player) {
-        CompletableFuture.runAsync(() -> {
-            long addr;
-            if (Main.coolDownPlayerList.containsKey(player.getGameProfile().getId())) {
-                addr = Main.coolDownPlayerList.get(player.getGameProfile().getId());
-                unsafe.putInt(addr, 15);
-                if (unsafe.getInt(addr + 4) != 0)
-                    return;
-            } else {
-                addr = unsafe.allocateMemory(8);
-                Main.coolDownPlayerList.put(player.getGameProfile().getId(), addr);
-                unsafe.putInt(addr, 15);
-            }
+        long addr;
+        if (Main.coolDownPlayerList.containsKey(player.getGameProfile().getId())) {
+            addr = Main.coolDownPlayerList.get(player.getGameProfile().getId());
+            unsafe.putInt(addr, 15);
+            if (unsafe.getInt(addr + 4) != 0)
+                return;
+        } else {
+            addr = unsafe.allocateMemory(8);
+            Main.coolDownPlayerList.put(player.getGameProfile().getId(), addr);
+            unsafe.putInt(addr, 15);
+        }
 
-            while (unsafe.getInt(addr) > 0) {
+        var task = new AtomicReference<ScheduledFuture<?>>();
+        task.set(pool.scheduleAtFixedRate(() -> {
+            if (unsafe.getInt(addr) > 0) {
                 unsafe.putInt(addr + 4, Thread.currentThread().hashCode());
                 var x = unsafe.getInt(addr) - 1;
                 unsafe.putInt(addr, x);
                 player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
                 System.out.println("Кд (" + player.getName().asString() + ") => " + x + " сек.");
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+            } else {
+                unsafe.putInt(addr + 4, 0);
+                task.get().cancel(false);
+                player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
             }
+        }, 1, 1, TimeUnit.SECONDS));
 
-            unsafe.putInt(addr + 4, 0);
-            player.sendMessage(new LiteralText("§aМожете§7 выходить!"), false);
-        });
+        unsafe.putInt(addr + 4, 0);
     }
 
     public static long getAddressOfObject(Object obj) {
