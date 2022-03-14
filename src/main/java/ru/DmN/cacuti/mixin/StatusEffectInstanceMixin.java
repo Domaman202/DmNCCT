@@ -1,4 +1,4 @@
-package ru.DmN.cct.mixin;
+package ru.DmN.cacuti.mixin;
 
 import net.minecraft.entity.effect.StatusEffect;
 import net.minecraft.entity.effect.StatusEffectInstance;

@@ -1,4 +1,4 @@
-package ru.DmN.cct.mixin;
+package ru.DmN.cacuti.mixin;
 
 import com.mojang.authlib.GameProfile;
 import net.minecraft.block.Blocks;
@@ -15,12 +15,12 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.DmN.cct.Main;
+import ru.DmN.cacuti.Main;
 
 import java.net.SocketAddress;
 import java.util.concurrent.CompletableFuture;
 
-import static ru.DmN.cct.Main.unsafe;
+import static ru.DmN.cacuti.Main.unsafe;
 
 @Mixin(PlayerManager.class)
 public class PlayerManagerMixin {

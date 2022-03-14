@@ -1,4 +1,4 @@
-package ru.DmN.cct.permission;
+package ru.DmN.cacuti.permission;
 
 import java.io.Serializable;
 import java.util.LinkedHashSet;

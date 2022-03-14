@@ -1,4 +1,4 @@
-package ru.DmN.cct.mixin;
+package ru.DmN.cacuti.mixin;
 
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.screen.ScreenHandler;
@@ -9,8 +9,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
-import ru.DmN.cct.mixin_.ISHAccess;
-import ru.DmN.cct.mixin_.ISlotAccess;
+import ru.DmN.cacuti.mixin_.ISHAccess;
+import ru.DmN.cacuti.mixin_.ISlotAccess;
 
 import java.io.File;
 import java.io.FileOutputStream;

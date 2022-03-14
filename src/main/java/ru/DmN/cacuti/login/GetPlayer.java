@@ -1,4 +1,4 @@
-package ru.DmN.cct.login;
+package ru.DmN.cacuti.login;
 
 import net.minecraft.server.network.ServerPlayerEntity;
 
