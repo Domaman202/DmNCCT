@@ -139,8 +139,10 @@ public abstract class ServerPlayerEntityMixin extends PlayerEntity {
 
     @Inject(method = "onDeath", at = @At("HEAD"))
     public void onDeath(DamageSource source, CallbackInfo ci) {
-        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getId()))
+        if (Main.coolDownPlayerList.containsKey(this.getGameProfile().getId())) {
             unsafe.putInt(Main.coolDownPlayerList.get(this.getGameProfile().getId()), 0);
+            unsafe.storeFence();
+        }
     }
 
     @Override

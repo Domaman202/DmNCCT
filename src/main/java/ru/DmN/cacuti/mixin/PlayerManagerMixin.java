@@ -28,6 +28,7 @@ public class PlayerManagerMixin {
     void connectJoin(SocketAddress address, GameProfile profile, CallbackInfoReturnable<Text> cir) {
         if (Main.coolDownPlayerList.containsKey(profile.getId())) {
             unsafe.putInt(Main.coolDownPlayerList.get(profile.getId()), 0);
+            unsafe.storeFence();
             cir.setReturnValue(null);
             cir.cancel();
         }

@@ -361,23 +361,25 @@ public class Main implements ModInitializer {
         long addr;
         if (Main.coolDownPlayerList.containsKey(player.getGameProfile().getId())) {
             addr = Main.coolDownPlayerList.get(player.getGameProfile().getId());
-            unsafe.putInt(addr, 15);
+            unsafe.putInt(addr, 16);
             if (unsafe.getInt(addr + 4) != 0)
                 return;
         } else {
             addr = unsafe.allocateMemory(8);
             Main.coolDownPlayerList.put(player.getGameProfile().getId(), addr);
-            unsafe.putInt(addr, 15);
+            unsafe.putInt(addr, 16);
         }
 
         var task = new AtomicReference<ScheduledFuture<?>>();
         task.set(pool.scheduleAtFixedRate(() -> {
+            unsafe.loadFence();
             if (unsafe.getInt(addr) > 0) {
                 unsafe.putInt(addr + 4, Thread.currentThread().hashCode());
                 var x = unsafe.getInt(addr) - 1;
                 unsafe.putInt(addr, x);
-                player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
-                System.out.println("Кд (" + player.getName().asString() + ") => " + x + " сек.");
+                unsafe.storeFence();
+                if (x % 5 == 0)
+                    player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
             } else {
                 unsafe.putInt(addr + 4, 0);
                 task.get().cancel(false);

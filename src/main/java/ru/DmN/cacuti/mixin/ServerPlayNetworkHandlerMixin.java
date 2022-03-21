@@ -150,13 +150,8 @@ public abstract class ServerPlayNetworkHandlerMixin {
 
         CompletableFuture.runAsync(() -> {
             if (Main.coolDownPlayerList.containsKey(this.player.getGameProfile().getId())) {
-                while (unsafe.getInt(Main.coolDownPlayerList.get(this.player.getGameProfile().getId())) > 1) {
-                    try {
-                        Thread.sleep(100);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
+                this.player.stopRiding();
+                while (unsafe.getInt(Main.coolDownPlayerList.get(this.player.getGameProfile().getId())) > 1) unsafe.loadFence();
             }
 
             LOGGER.info("{} lost connection: {}", this.player.getName().getString(), reason.getString());

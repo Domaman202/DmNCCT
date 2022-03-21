@@ -22,6 +22,6 @@
   ],
 
   "entrypoints": {
-    "main": ["ru.DmN.cct.Main"]
+    "main": ["ru.DmN.cacuti.Main"]
   }
 }
