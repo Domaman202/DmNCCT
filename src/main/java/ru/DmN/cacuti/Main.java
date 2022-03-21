@@ -378,7 +378,9 @@ public class Main implements ModInitializer {
                 var x = unsafe.getInt(addr) - 1;
                 unsafe.putInt(addr, x);
                 unsafe.storeFence();
-                if (x % 5 == 0)
+                if (x == 0)
+                    player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + 1 + "§7 сек."), false);
+                else if (x % 5 == 0)
                     player.sendMessage(new LiteralText("§cНе выходите§7, осталось - §e" + x + "§7 сек."), false);
             } else {
                 unsafe.putInt(addr + 4, 0);
