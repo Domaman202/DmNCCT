@@ -14,7 +14,9 @@
     "ServerCommandSourceMixin",
     "ServerPlayerEntityMixin",
     "ServerPlayNetworkHandlerMixin",
+    "ServerWorldMixin",
     "ShearsItemMixin",
+    "SleepManagerMixin",
     "SlotMixin",
     "StatusEffectInstanceMixin"
   ],

@@ -9,10 +9,7 @@ import net.minecraft.network.MessageType;
 import net.minecraft.network.NetworkThreadUtils;
 import net.minecraft.network.Packet;
 import net.minecraft.network.listener.PacketListener;
-import net.minecraft.network.packet.c2s.play.ChatMessageC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.network.packet.c2s.play.VehicleMoveC2SPacket;
+import net.minecraft.network.packet.c2s.play.*;
 import net.minecraft.network.packet.s2c.play.VehicleMoveS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.ServerPlayNetworkHandler;
@@ -37,6 +34,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import ru.DmN.cacuti.Main;
+import ru.DmN.cacuti.access.INormalWakeUpAccess;
 import ru.DmN.cacuti.login.listeners.OnGameMessage;
 import ru.DmN.cacuti.login.listeners.OnPlayerMove;
 
@@ -130,6 +128,11 @@ public abstract class ServerPlayNetworkHandlerMixin {
     @Shadow @Final static Logger LOGGER;
 
     @Shadow protected abstract boolean isHost();
+
+    @Inject(method = "onClientCommand", at = @At(value = "INVOKE", target = "Lnet/minecraft/server/network/ServerPlayerEntity;wakeUp(ZZ)V"))
+    public void onClientCommand(ClientCommandC2SPacket packet, CallbackInfo ci) {
+        ((INormalWakeUpAccess) this.player).call_normalWakeUp(false, true);
+    }
 
     /**
      * @author DomamaN202

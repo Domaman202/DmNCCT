@@ -55,6 +55,7 @@ public class Main implements ModInitializer {
 
     public static final ScheduledExecutorService pool = Executors.newScheduledThreadPool(1);
     public static final Map<UUID, Long> coolDownPlayerList = new HashMap<>();
+    public static final long sleepThreadLock = unsafe.allocateMemory(1);
 
     @Override
     public void onInitialize() {
@@ -451,5 +452,9 @@ public class Main implements ModInitializer {
             t.printStackTrace();
             return null;
         }
+    }
+
+    static {
+        unsafe.putByte(sleepThreadLock, (byte) 0);
     }
 }

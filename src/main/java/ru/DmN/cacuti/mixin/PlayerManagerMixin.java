@@ -38,8 +38,7 @@ public class PlayerManagerMixin {
     public void onPlayerConnect(ClientConnection connection, ServerPlayerEntity player, CallbackInfo ci) {
         Main.getPlayer.get(player).set(false);
         player.setInvulnerable(true);
-        player.sendMessage(new LiteralText("§9Welcome to the server, in order to play, you must log in.\n§eLog in using /login and register using /register"), false);
-        player.networkHandler.sendPacket(new TitleS2CPacket(new LiteralText("§aIdentify yourself")));
+        player.sendMessage(new LiteralText("§9Добро пожаловать на CaCuTi!\n§eПожалуйста войдите с помощью /login или зарегестрируйтесь /register"), false);
         World world = player.world;
         if (world.getBlockState(player.getBlockPos()).getBlock() == Blocks.NETHER_PORTAL) {
             CompletableFuture.runAsync(() -> {
